@@ -7,3 +7,6 @@ Save as "RI_scores.xlsx"
 Go to the bottom of the sheet and delete the state level data.
 Make sure to put "ES.png" and "RI_scores.xlsx" in the same file where you have your code.
 The "updated-generator-vecona-code" generates the graphs. In the code, in the very last while loop, change the path to your own local file.
+
+
+The Data Analysis done by Christian are the files entitled "Dataset Generation.Rmd" and "Analysis.Rmd"
