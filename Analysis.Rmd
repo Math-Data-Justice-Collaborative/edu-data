@@ -1,0 +1,3656 @@
+---
+title: "Investigating Educational Outcomes for Providence Community Advocacy Analysis"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+date: "2025-03-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE}
+# set your current working directory
+setwd("~/Desktop/Thesis")  
+
+# use 'install.packages()' if you do not already have the packages downloaded
+#install.packages("readxl")
+#install.packages("tidyr") 
+#install.packages("dplyr")   
+#install.packages("ggplot2") 
+#install.packages("tidyverse") 
+#install.packages("tibble")
+#install.packages("RColorBrewer") 
+#install.packages("stringr") 
+#install.packages("forcats")
+#tinytex::install_tinytex()
+
+# library('package name') is to load in the packages that will be used throughout 
+  # the file
+library(readxl) 
+library(tidyr)
+library(dplyr) 
+library(ggplot2)
+library(RColorBrewer)
+library(stringr)
+library(forcats)
+```
+
+## Importing Amalgamated Datasets
+
+```{r}
+# data consisting of schools from PPSD
+providence_data <- read.csv("~/Vecina_Data/Providence_Data.csv")
+
+# data consisting of charter schools in Rhode Island
+charter_data <- read.csv("~/Vecina_Data/Charter_Data.csv")
+
+# data consisting of schookls from PPSD and Charter Schools in Rhode Island
+# Charter schools will be represented as 'C' and Non-Charter schools as 'NC' 
+# in this case, the schools from the PPSD are considered Non-Charter
+finalized_data <- read.csv("~/Vecina_Data/Finalized_Data.csv")
+
+# data consisting of all schools in Rhode Island
+ri_data <- read.csv("~/Vecina_Data/RhodeIsland_Data.csv")
+```
+
+## ------------------------------------------------------------------------------------------------------
+
+# Introductory Data
+
+## ------------------------------------------------------------------------------------------------------
+
+## National Assessment of Educational Progress (NAEP) Data in 2022
+
+The numbers below all represent the proportion of students who tested at the level of NAEP Proficient. The provided numbers can be found here: <https://nces.ed.gov/nationsreportcard/about/>, by selecting the Achievement-Level Results at the National Level.
+
+\*\* Note: all of the numbers provided are from the 2022 testing year with the exception of High School Mathematics and all Science scores, which are the results of testing conducted in 2019 \*\*
+
+```{r NAEP Data}
+# creating a tibble using the data from the NAEP report card
+naep_data <- tibble(
+  subject = c("Math", "Reading", "Science", "Math", "Reading", "Science", 
+              "Math", "Reading", "Science"), 
+  school = c("Elementary", "Elementary", "Elementary", "Middle", "Middle", 
+             "Middle", "High", "High", "High"), 
+  scores = c(36, 33, 35, 26, 31, 33, 24, 37, 20)
+)
+
+# rearranging how the school column is ordered, this makes it dependent on school level 
+  # rather than the subject
+naep_data$school <- factor(naep_data$school, levels = c("Elementary", "Middle", "High"))
+```
+
+## NAEP 2019 Plot
+
+Taking the tibble in the naep_data variable, we will now create a graph that compares the three Schooling Levels, Elementary, Middle, and High School, across the three Test Subjects, Math, Reading, and Science.
+
+```{r NAEP Plot}
+
+# creating a basic plot using the naep_data variable
+naep_graph <- ggplot(naep_data, aes(x = school, y = scores, fill = scores)) + 
+  geom_bar(stat = "identity", position = "dodge", width = 0.75) + 
+  ggtitle('National Test Score Proficiency in 2019') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(scores)), vjust = -1, position = position_dodge(0.75), 
+            size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 28) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Schooling Type") +
+  scale_y_continuous(name="Proficiency Rate") +
+  coord_cartesian(ylim = c(5, 100)) + 
+  
+  # creates a grid format, separates based on subject
+  facet_grid(~subject)
+
+print(naep_graph)
+```
+
+From this graph, we can identify the main area of subject consistency, Reading. In Math and Science, there appears to be a downward trend in the proportion of proficient students, when comparing High School to both Middle and Elementary School. It is interesting to note that High School students performed the best when compared to the other Schooling Types in Reading.
+
+## Providence Public School District (PPSD) Data from 2020-2022
+
+The numbers below all represent the proportion of students who met the Test Score Proficiency standard within the state of Rhode Island. The numbers provided can be found here: <https://www.usnews.com/education/k12/rhode-island/districts/providence-110121>
+
+\*\* Note: all of the numbers provided were taken from the website, which states that the data is based on the 2020-2021 and 2021-2022 school years.
+
+```{r PPSD Data (20-22)}
+
+# creating a tibble using the data from the PPSD usnews
+ppsd_data <- tibble(
+  subject = c("Math", "Reading", "Math", "Reading", "Math", "Reading"), 
+  school = c("Elementary", "Elementary", "Middle", "Middle", "High", "High"), 
+  scores = c(9, 18, 6, 12, 30, 24)
+)
+
+# rearranging how the school column is ordered, this makes it dependent on school level 
+  # rather than the subject
+ppsd_data$school <- factor(ppsd_data$school, levels = c("Elementary", "Middle", "High"))
+```
+
+## PPSD 20-22 Plot
+
+Taking the tibble in the ppsd_data variable, we will now create a graph that compares the three Schooling Levels, Elementary, Middle, and High School, across the two Test Subjects, Math and Reading.
+
+```{r PPSD Plot}
+
+# creating a basic plot using the ppsd_data variable
+ppsd_graph <- ggplot(ppsd_data, aes(x = school, y = scores, fill = scores)) + 
+  geom_bar(stat = "identity", position = "dodge", width = 0.75) + 
+  ggtitle('Providence Public School District Test Score Proficiency in 2018') +  
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(scores)), vjust = -1, position = position_dodge(0.75), 
+            size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 20) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Schooling Type") +
+  scale_y_continuous(name="Proficiency Rate") +
+  coord_cartesian(ylim = c(5, 100)) + 
+  
+  # creates a grid format, separates based on subject
+  facet_grid(~subject)
+print(ppsd_graph)
+```
+
+Comparing this graph to the NAEP graph, on average students in the PPSD are performing at a much worse rate. On the contrary, we can see that High School students had the highest proportion of proficient students in both subjects, and Middle School students had the lowest proportion of proficient students in both subjects.
+
+Finally, there is a discrepancy in performances amongst all schools in Math and Reading. With regards to Math, there was more than a 20% difference in the proportion of proficient students, whereas with Reading, there was about a 10% difference in the proportion of proficient students.
+
+## RIDE Report Card Data in 2024
+
+The numbers below all represent the proportion of students who met the Test Score Proficiency standard within the state of Rhode Island. The numbers provided can be found here: <https://github.com/vpiercey/NuevasVoces/blob/main/updated-generator-vecina-code.R>
+
+\*\* To access the specific data files where these numbers are calculated, you can download the excel files using this link: <https://reportcard.ride.ri.gov/Researcher> \*\*
+
+```{r RIDE Report Card Data}
+
+# creating a tibble using the data from the RIDE Report Card
+ride_data <- tibble(
+  subject = c("ELA", "Math", "Science", "ELA", "Math", "Science"), 
+  lep = c("ELL", "Non-ELL", "ELL", "Non-ELL","ELL", "Non-ELL"), 
+  scores = c(5.57, 39.25, 6.82, 32.28, 3.20, 33.96)
+)
+```
+
+## Ride Report Card Plot
+
+Taking the tibble in the ride_data variable, we will now create a graph that compares ELL and Non-ELL students across the three Test Subjects, ELA, Math, and Science.
+
+```{r RIDE Report Card Plot}
+
+# creating a basic plot using the ride_data variable
+ride_graph <- ggplot(ride_data, aes(x = lep, y = scores, fill = scores)) + 
+  geom_bar(stat = "identity", position = "dodge", width = 0.75) + 
+  ggtitle('ELL vs Non-ELL Student Proficiency Within Rhode Island') +  
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(scores)), vjust = -1, position = position_dodge(0.75), 
+            size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 20) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="LEP Student") +
+  scale_y_continuous(name="Proficiency Rate") +
+  coord_cartesian(ylim = c(5, 100)) + 
+  
+  # creates a grid format, separates based on subject
+  facet_grid(~subject)
+print(ride_graph)
+```
+
+Here, we can see the discrepancy in performances across all subjects when comparing ELL to Non-ELL students. There is about a 30% difference in the proportion of proficient students across each subject. The largest difference is amongst students tested in Math, as ELL students tested the weakest in Math, and Non-ELL students tested the strongest.
+
+Comparing this data to the NAEP graph, we can see that Non-ELL students are performing at a rate similar to the national as a whole, while ELL students are nowhere near the "national standard".
+
+## ------------------------------------------------------------------------------------------------------
+
+# Working with the Providence Dataset
+
+## ------------------------------------------------------------------------------------------------------
+
+## Analyzing the Dataset (LEP)
+
+In this portion, we summarize the Providence Data file by grouping ELL and Non-ELL performances separately and find the average performance level throughout each year. Then we will merge Level 1 and Level 2, to represent Non ME or students who did not Meet or Exceed the proficiency standard, and Level 3 and Level 4, to represent ME or students who did Meet or Exceed the proficiency standard.
+
+Here, we are only considering students that are labelled as 'LEP', which stands for Limited English Proficiency. LEP is used to refer to students who are not fluent in the English language, whether or not it is their native language. Typically, Non-ELL students speak English as their native language, and ELL students speak English as their non-native language, meaning it could be a second, third, etc.
+
+```{r PPSD LEP DOT}
+
+# filtering data based off of lep, which stands for 'limited english proficiency' 
+# it only includes ELL and Non-ELL students who are not considered proficient in english
+Lep_data <- providence_data %>% group_by(GroupType) %>% filter(GroupType == 'lep')
+
+# here, we will consider only ELL students for their respective year of testing. By 
+  # using the 'summarize' function, we will find the mean values for student testing 
+  # based on what level of proficiency a student tested at 
+
+# using 'summarize_if' will create a final variable that only consists of numeric variable
+  # types, meaning we will have to add in relevant data and identifiers later
+ell_data18 <- Lep_data %>% filter(GroupName == 'ELL', Year == '2018') 
+ell_data18 <- ell_data18[ -c(2:4, 7:9)] 
+ell_data18 <- ell_data18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_data19 <- Lep_data %>% filter(GroupName == 'ELL', Year == '2019') 
+ell_data19 <- ell_data19[ -c(2:4, 7:9)] 
+ell_data19 <- ell_data19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_data22 <- Lep_data %>% filter(GroupName == 'ELL', Year == '2022') 
+ell_data22 <- ell_data22[ -c(2:4, 7:9)] 
+ell_data22 <- ell_data22 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ell_data23 <- Lep_data %>% filter(GroupName == 'ELL', Year == '2023') 
+ell_data23 <- ell_data23[ -c(2:4, 7:9)] 
+ell_data23 <- ell_data23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# now we will row bind the data, which clusters the individual years of data to a 
+  # final variable assuming the column names and the number of columns match for 
+  # every variable in the 'rbind' function. After, we will add back in the GroupName 
+  # and Year columns so that we know which data these values pertain to
+all_ell <- rbind(ell_data18, ell_data19, ell_data22, ell_data23) 
+all_ell$GroupName <- 'ELL' 
+all_ell$Year <- c('2018', '2019', '2022', '2023')
+all_ell <- all_ell %>% relocate(GroupName, .before = Level_1_Count) %>% 
+  relocate(Year, .before = GroupName)
+
+# average the counts and percentages to get our final numeric values. We will use the 
+  # variable ME_Percent as the basis of the majority of graphs.
+all_ell <- all_ell %>% mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (Level_4_Percentage + Level_3_Percentage)) %>% 
+  mutate(NonME_Percent = Level_1_Percentage + Level_2_Percentage)
+all_ell <- all_ell[ -c(1,2) ]
+
+# the same process will now be applied to Not ELL students who fall into the LEP category
+nonell_data18 <- Lep_data %>% filter(GroupName == 'Not ELL', Year == '2018') 
+nonell_data18 <- nonell_data18[ -c(2:4, 7:9)] 
+nonell_data18 <- nonell_data18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_data19 <- Lep_data %>% filter(GroupName == 'Not ELL', Year == '2019') 
+nonell_data19 <- nonell_data19[ -c(2:4, 7:9)] 
+nonell_data19 <- nonell_data19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_data22 <- Lep_data %>% filter(GroupName == 'Not ELL', Year == '2022') 
+nonell_data22 <- nonell_data22[ -c(2:4, 7:9)] 
+nonell_data22 <- nonell_data22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_data23 <- Lep_data %>% filter(GroupName == 'Not ELL', Year == '2023') 
+nonell_data23 <- nonell_data23[ -c(2:4, 7:9)] 
+nonell_data23 <- nonell_data23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+all_nonell <- rbind(nonell_data18, nonell_data19, nonell_data22, nonell_data23) 
+all_nonell$GroupName <- 'Non-ELL'
+all_nonell$Year <- c('2018', '2019', '2022', '2023')
+all_nonell <- all_nonell %>% relocate(GroupName, .before = Level_1_Count) %>% 
+  relocate(Year, .before = GroupName) 
+
+all_nonell <- all_nonell %>% mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (Level_4_Percentage + Level_3_Percentage)) %>% 
+  mutate(NonME_Percent = Level_1_Percentage + Level_2_Percentage)
+all_nonell <- all_nonell[ -c(1,2) ]
+
+# conducting a statistical t-test, which will compare the ME_Percent mean values 
+  # of ELL and Non-ELL students to see if the difference in performance is 
+  # statistically significant and hence, not due to chance 
+
+# to use the 't.test' formula, we must remove every value aside from GroupName and
+  # ME_Percent. That is, we must have a numerical value and the group it falls into
+all_ell_ME <- all_ell[ -c(1:13, 15)]
+all_nonell_ME <- all_nonell[ -c(1:13, 15)]
+t.test(all_ell_ME, all_nonell_ME)
+
+# combining all data for ELL and Non-ELL students together into one variable
+all_lep <- rbind(all_ell, all_nonell)  
+
+# finalizing the variable, adding in the Takeover column, which serves to identify 
+  # which years the RIDE takeover affected test scores, and which it didn't. In our 
+  # case, Pre Takeover refers to before the takeover began, and Post Takeover refers 
+  # to after the Takeover began. 
+all_lep <- all_lep[ -c(4:12)] %>% arrange(GroupName, Year)  
+all_lep$Takeover <- c('Pre Takeover', 'Pre Takeover', 'Post Takeover',
+                      'Post Takeover', 'Pre Takeover', 'Pre Takeover', 'Post Takeover', 
+                      'Post Takeover')
+all_lep <- all_lep %>% relocate(Takeover, .after = Year)
+print(all_lep)
+
+```
+
+## LEP Year Plot
+
+Taking the LEP data, we will compare the proportion of proficient ELL and Non-ELL students for each respective year of data. This will allow us to understand how performances have changed on a year by year basis as well as how the pandemic and takeover affected student performance.
+
+```{r PPSD LEP DOT Plot}
+
+# creating a basic plot using the all_lep variable
+all_lep_year_plot <- ggplot(all_lep, aes(x = GroupName, y = ME_Percent, fill = 
+                     ME_Percent)) + geom_bar(stat = "identity", 
+                     position = "dodge", width = 0.7) + 
+  ggtitle('LEP Students vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 12.5) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis 
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "LEP Student") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 100)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on Year 
+  facet_grid(Year~GroupName, scales = "free", space = "free") 
+
+print(all_lep_year_plot)
+```
+
+From the graph, we can see that ELL students had less than 6% of their total population meeting or exceeding the standard. The amount of students meeting the standard dropped from 2018 to 2019 and continued dropping after covid. However in 2023 they showed some improvement.
+
+Compared to ELL students, Non-ELL students performed much better, with almost 20% of their total population meeting or exceeding the standard. They showed improvement between 2018 and 2019, dropped due to covid, and then reached their highest proportion of proficient students in 2023.
+
+## Analyzing the Dataset (LEP ELL vs Subject)
+
+Now that we understand the divide of ELL and Non-ELL students when considering their general performance, we will consider if there exists any large discrepancy due to the Test Subject a student is being tested in. This way, we can determine if the lower levels of proficient students are due to particular hardship in a Test Subject, or if it applies to any Test Subject being considered.
+
+First, we will consider ELL performance in ELA and Math separately before combining them to produce our final 'ell_subjects' variable. We will then undergo the same process for creating the 'nonell_subjects' variable before amalgamating both variables to create the 'lep_subjects' variable.
+
+```{r PPSD LEP ELL TestSubject}
+
+# here we are following the same process as comparing ELL and Non-ELL students, 
+  # however we are adding in performances divided by Test Subject, meaning we will 
+  # be amalgamating more variables together in the end. The overall process remains 
+  # the same. 
+ell_ELA18 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'ELA', 
+                                 Year == '2018') 
+ell_ELA18 <- ell_ELA18[ -c(1:4, 7, 9, 10)]  
+ell_ELA18 <- ell_ELA18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_ELA19 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'ELA', 
+                                 Year == '2019')  
+ell_ELA19 <- ell_ELA19[ -c(1:4, 7, 9, 10)]  
+ell_ELA19 <- ell_ELA19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_ELA22 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'ELA', 
+                                 Year == '2022')  
+ell_ELA22 <- ell_ELA22[ -c(1:4, 7, 9, 10)]    
+ell_ELA22 <- ell_ELA22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_ELA23 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'ELA', Year == 
+                                   '2023')   
+ell_ELA23 <- ell_ELA23[ -c(1:4, 7, 9, 10)]   
+ell_ELA23 <- ell_ELA23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this variable represents how the performances of ELL students tested in ELA have 
+  # changed over time
+ell_ELA <- rbind(ell_ELA18, ell_ELA19, ell_ELA22, ell_ELA23)
+
+# now, we will consider Math instead of ELA
+ell_Math18 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'Math', 
+                                  Year == '2018')
+ell_Math18 <- ell_Math18[ -c(1:4, 7, 9, 10)] 
+ell_Math18 <- ell_Math18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_Math19 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'Math', 
+                                  Year == '2019') 
+ell_Math19 <- ell_Math19[ -c(1:4, 7, 9, 10)]
+ell_Math19 <- ell_Math19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_Math22 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'Math', 
+                                  Year == '2022') 
+ell_Math22 <- ell_Math22[ -c(1:4, 7, 9, 10)] 
+ell_Math22 <- ell_Math22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ell_Math23 <- Lep_data %>% filter(GroupName == 'ELL', TestSubject == 'Math', 
+                                  Year == '2023') 
+ell_Math23 <- ell_Math23[ -c(1:4, 7, 9, 10)]  
+ell_Math23 <- ell_Math23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+print(ell_Math23)
+
+# this variable represents how the performances of ELL students tested in Math have 
+  # changed over time
+ell_Math <- rbind(ell_Math18, ell_Math19, ell_Math22, ell_Math23) 
+
+# calculating average values and counts for ELL students in ELA 
+ell_ELA <- ell_ELA %>%
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# calculating average values and counts for ELL students in Math
+ell_Math <- ell_Math %>%
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# here, the statistical t-test will determine whether or not the difference in ELL 
+  # performance between Math and ELA is statistically significant.
+ell_ELA_ME <- ell_ELA[ -c(1:12, 14)]
+ell_Math_ME <- ell_Math[ -c(1:12, 14)]
+t.test(ell_ELA_ME, ell_Math_ME)
+
+# combining the ELL Data Over Time (DOT) ELA and Math variables
+ell_subjects <- rbind(ell_ELA, ell_Math) 
+
+# as 'summarize_if' removed the TestSubject column, here we will add it back in, 
+  # additionally, we will add in the Takeover Column
+ell_subjects$TestSubject <- c('ELA', 'ELA', 'ELA', 'ELA', 'Math', 'Math', 
+                              'Math', 'Math') 
+ell_subjects <- ell_subjects %>% relocate(TestSubject, .after = Year)
+ell_subjects$Takeover <- c('Pre Takeover', 'Pre Takeover', 'Post Takeover',
+                           'Post Takeover', 'Pre Takeover', 'Pre Takeover', 
+                           'Post Takeover', 'Post Takeover')
+ell_subjects <- ell_subjects %>% relocate(Takeover, .after = Year)
+ell_subjects <- ell_subjects[ -c(4:12)] %>% arrange(TestSubject, Year)  
+print(ell_subjects)
+```
+
+## Analyzing the Dataset (LEP Non-ELL vs Subject)
+
+```{r PPSD LEP Non-ELL TestSubject}
+
+# following the same process as we did for ELL students, but here we will set the 
+  # filter on the GroupName column to only consider Not ELL students.
+nonell_ELA18 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'ELA',
+                                    Year == '2018')  
+nonell_ELA18 <- nonell_ELA18[ -c(1:4, 7, 9, 10)] 
+nonell_ELA18 <- nonell_ELA18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_ELA19 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'ELA',
+                                    Year == '2019')  
+nonell_ELA19 <- nonell_ELA19[ -c(1:4, 7, 9, 10)] 
+nonell_ELA19 <- nonell_ELA19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_ELA22 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'ELA',
+                                    Year == '2022')   
+nonell_ELA22 <- nonell_ELA22[ -c(1:4, 7, 9, 10)] 
+nonell_ELA22 <- nonell_ELA22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_ELA23 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'ELA', 
+                                    Year == '2023') 
+nonell_ELA23 <- nonell_ELA23[ -c(1:4, 7, 9, 10)] 
+nonell_ELA23 <- nonell_ELA23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this variable represents how the performances of Non-ELL students tested in ELA  
+  # have changed over time
+nonell_ELA <- rbind(nonell_ELA18, nonell_ELA19, nonell_ELA22, nonell_ELA23)
+
+# now, we will consider Math instead of ELA
+nonell_Math18 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'Math',
+                                     Year == '2018')  
+nonell_Math18 <- nonell_Math18[ -c(1:4, 7, 9, 10)]  
+nonell_Math18 <- nonell_Math18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_Math19 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'Math', 
+                                     Year == '2019') 
+nonell_Math19 <- nonell_Math19[ -c(1:4, 7, 9, 10)]
+nonell_Math19 <- nonell_Math19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_Math22 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'Math', 
+                                     Year == '2022') 
+nonell_Math22 <- nonell_Math22[ -c(1:4, 7, 9, 10)]
+nonell_Math22 <- nonell_Math22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+nonell_Math23 <- Lep_data %>% filter(GroupName == 'Not ELL', TestSubject == 'Math', 
+                                     Year == '2023') 
+nonell_Math23 <- nonell_Math23[ -c(1:4, 7, 9, 10)]
+nonell_Math23 <- nonell_Math23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this variable represents how the performances of Non-ELL students tested in Math  
+  # have changed over time
+nonell_Math <- rbind(nonell_Math18, nonell_Math19, nonell_Math22, nonell_Math23) 
+
+# combining the Non-ELL Data Over Time (DOT) ELA and Math variables
+nonell_subjects <- rbind(nonell_ELA, nonell_Math) 
+
+# calculating average values and counts for Non-ELL students in ELA and Math
+nonell_subjects <- nonell_subjects %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>%
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>%
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# as mentioned above, 'summarize_if' removed the TestSubject column, here we will 
+  # add it back in, as well as the Takeover column
+nonell_subjects$TestSubject <- c('ELA', 'ELA', 'ELA', 'ELA', 'Math', 'Math', 
+                                 'Math', 'Math')
+nonell_subjects$Takeover <- c('Pre Takeover', 'Pre Takeover', 'Post Takeover', 
+                              'Post Takeover', 'Pre Takeover', 'Pre Takeover', 
+                              'Post Takeover', 'Post Takeover')
+nonell_subjects <- nonell_subjects %>% relocate(TestSubject, .after = Year) %>% 
+  relocate(Takeover, .after = Year)
+nonell_subjects <- nonell_subjects[ -c(4:12)] %>% arrange(TestSubject, Year)  
+
+# this variable represents the combined LEP Test Subject DOT
+lep_subjects <- rbind(ell_subjects, nonell_subjects) 
+
+# adding in values to the GroupType column, distinguishing ELL and Non-ELL performances
+lep_subjects$GroupName <- c('ELL', 'ELL', 'ELL', 'ELL', 'ELL', 'ELL', 'ELL', 'ELL',
+                            'Not ELL', 'Not ELL', 'Not ELL', 'Not ELL', 'Not ELL',
+                            'Not ELL', 'Not ELL', 'Not ELL') 
+lep_subjects <- lep_subjects %>% relocate(GroupName, .after = Takeover)
+print(lep_subjects)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+lep_subjects_comp <- aov(ME_Percent ~ GroupName + TestSubject, data = lep_subjects)
+summary(lep_subjects_comp)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of GroupName and TestSubject
+ind_lep_subjects_comps <- TukeyHSD(lep_subjects_comp)
+ind_lep_subjects_comps
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means, with the TestSubject having some influence. This is coupled with the fact that the difference in means between ELL and Non-ELL students is much larger than the difference in means between Math and ELA.
+
+The Residuals column indicates that some unknown variance is present in the data, however based on its low Mean Sq value compared to the GroupName and TestSubject columns, its influence is not significantly large.
+
+## LEP Subject Plot
+
+Taking the LEP Subject data, we will compare the proportion of proficient ELL and Non-ELL students for each respective year of data dependent on the Test Subject being considered. This will allow us to understand how specific subject performances have changed and if the discrepancy in performance is due to issues with a specific subject or as a whole.
+
+```{r PPSD LEP TestSubject Plot}
+
+# creating a basic plot using the lep_subjects variable
+lep_subjects_plot <- ggplot(lep_subjects, aes(x = GroupName, y = ME_Percent, 
+                     fill = ME_Percent)) + geom_bar(stat = "identity", 
+                     position = "dodge", width = 0.7) + 
+  ggtitle('LEP School Subjects vs Met or Exceeded Rate') +
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 15) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="LEP Student") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10),
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) +
+  
+  # creates a grid format, separates based on Test Subject as well as Year and Takeover
+  facet_grid(Year~Takeover~TestSubject, scales = "free", space = "free") 
+  
+print(lep_subjects_plot)
+```
+
+From the graph, we can see that ELL student performance was relatively the same whether they were tested in ELA or Math. However, there was a higher proportion of proficient Non-ELL students in ELA compared to Math. This indicates that ELL performance in schools is not dependent on the subject, and rather it needs to be reformed as a whole.
+
+When comparing the difference of the proportion of proficient ELL vs Non-ELL students by Test Subject, in ELA, there is a difference of between 15-20%, whereas for Math, the difference is between 10-15%.
+
+## Analyzing the Dataset (Year vs SchType)
+
+Now that we understand how performances vary dependent on the Test Subject, we must consider if any variation in performance comes as the result of which Schooling Level a student is currently enrolled in. In our study, we will consider 3 Schooling Levels, being Elementary, Middle, and High School
+
+**\*\*** **Note:** Some schools in our data are cross listed as Middle/High Schools, meaning they enroll both Middle and High School students. Their performances will be mentioned in a separate column in our graph, however it should be treated as an extension of both Middle and High School performances. Similarly, we will only be considering
+
+```{r PPSD Year vs SchType}
+
+# filtering providence_data variable based on elementary school students 
+ele_sch <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType == 'Elementary School') 
+
+# filtering the ele_sch variable based on their performances in ELA, Math, and Science
+ele_sch18 <- ele_sch %>% filter(Year == '2018') 
+ele_sch18 <- ele_sch18[ -c(1:4, 7, 9:11)]   
+ele_sch18 <- ele_sch18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ele_sch19 <- ele_sch %>% filter(Year == '2019')  
+ele_sch19 <- ele_sch19[ -c(1:4, 7, 9:11)]    
+ele_sch19 <- ele_sch19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ele_sch22 <- ele_sch %>% filter(Year == '2022')  
+ele_sch22 <- ele_sch22[ -c(1:4, 7, 9:11)]     
+ele_sch22 <- ele_sch22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ele_sch23 <- ele_sch %>% filter(Year == '2023') 
+ele_sch23 <- ele_sch23[ -c(1:4, 7, 9:11)]   
+ele_sch23 <- ele_sch23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this represents the DOT for elementary school students
+all_ele <- rbind(ele_sch18, ele_sch19, ele_sch22, ele_sch23)
+
+# here, we are creating a vector variable to account for schools that are 6-8 and 
+  # 6-12. We will use 'filter(variable %in% *_names)' to select any instance of schools 
+  # that were listed as accepting both Middle and High School students
+m_names <- c('Middle School', 'Middle/High School')
+mid_sch <- providence_data %>% group_by(SchType) %>% filter(SchType %in% m_names) 
+
+# filtering the mid_sch variable based on their performances in ELA, Math, and Science
+mid_sch18 <- mid_sch %>% filter(Year == '2018')  
+mid_sch18 <- mid_sch18[ -c(1:4, 7, 9:11)]  
+mid_sch18 <- mid_sch18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_sch19 <- mid_sch %>% filter(Year == '2019') 
+mid_sch19 <- mid_sch19[ -c(1:4, 7, 9:11)]     
+mid_sch19 <- mid_sch19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_sch22 <- mid_sch %>% filter(Year == '2022')  
+mid_sch22 <- mid_sch22[ -c(1:4, 7, 9:11)]  
+mid_sch22 <- mid_sch22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_sch23 <- mid_sch %>% filter(Year == '2023')   
+mid_sch23 <- mid_sch23[ -c(1:4, 7, 9:11)]    
+mid_sch23 <- mid_sch23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this represents the DOT for middle school students
+all_mid <- rbind(mid_sch18, mid_sch19, mid_sch22, mid_sch23)
+
+# same process, however we will adjust what School Levels are being considered
+high_sch <- providence_data %>% group_by(SchType) %>% filter(SchType == 'High School')  
+
+# filtering the high_sch variable based on their performances in ELA, Math, and Science 
+high_sch18 <- high_sch %>% filter(Year == '2018') 
+high_sch18 <- high_sch18[ -c(1:4, 7, 9:11)]     
+high_sch18 <- high_sch18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_sch19 <- high_sch %>% filter(Year == '2019')   
+high_sch19 <- high_sch19[ -c(1:4, 7, 9:11)]     
+high_sch19 <- high_sch19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_sch22 <- high_sch %>% filter(Year == '2022')   
+high_sch22 <- high_sch22[ -c(1:4, 7, 9:11)]     
+high_sch22 <- high_sch22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_sch23 <- high_sch %>% filter(Year == '2023')   
+high_sch23 <- high_sch23[ -c(1:4, 7, 9:11)]    
+high_sch23 <- high_sch23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this represents the DOT for high school students
+all_high <- rbind(high_sch18, high_sch19, high_sch22, high_sch23)
+
+# row binding all school level DOT variables together
+all_levels <- rbind(all_ele, all_mid, all_high)
+
+# averaging counts and percentages for non-proficient and proficient students 
+  # in the all_levels variable
+all_levels <- all_levels %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>%
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# only keeping the school type, the year, and the mean values calculated above 
+all_levels <- all_levels [ -c(3:11)] %>% arrange(SchType, Year)  
+print(all_levels)
+```
+
+In general, Elementary and High Schools had relatively similar proportions of proficient students, however Middle Schools had a significantly smaller proportion of proficient students.
+
+## Analyzing the Dataset (LEP ELL vs SchType)
+
+We will now consider the individual performances of ELL and Non-ELL students dependent on School Type, better understand how their performances differ, both based on year and the Schooling Level they were enrolled in. Like usual, we will begin with ELL students. We will use the same process as mentioned above, however the only difference will be the extra level of filtering.
+
+**\*\*** **Note:** We will be comparing the general proficiency rate of students vs their respective School Type, meaning ELA, Math, and Science will be considered
+
+```{r PPSD LEP ELL vs SchType DOT}
+
+# filtering providence_data variable based on ELL students in elementary schools only
+ele_ell <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType == 'Elementary School', GroupName == 'ELL')   
+
+# here, we will find our yearly averages
+ele_ell18 <- ele_ell %>% filter(Year == '2018') 
+ele_ell18 <- ele_ell18[ -c(1:4, 7, 9, 10)]
+ele_ell18 <- ele_ell18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ele_ell19 <- ele_ell %>% filter(Year == '2019') 
+ele_ell19 <- ele_ell19[ -c(1:4, 7, 9, 10)]
+ele_ell19 <- ele_ell19 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ele_ell22 <- ele_ell %>% filter(Year == '2022')  
+ele_ell22 <- ele_ell22[ -c(1:4, 7, 9, 10)]
+ele_ell22 <- ele_ell22 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ele_ell23 <- ele_ell %>% filter(Year == '2023')  
+ele_ell23 <- ele_ell23[ -c(1:4, 7, 9, 10)]
+ele_ell23 <- ele_ell23 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# this represents the DOT for ELL elementary school students
+all_ele_ell <- rbind(ele_ell18, ele_ell19, ele_ell22, ele_ell23)
+
+# for middle and high schools we will use the same '*_names' vector as above 
+  # to calculate their respective School values
+mid_ell <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType %in% m_names, GroupName == 'ELL') 
+
+mid_ell18 <- mid_ell %>% filter(Year == '2018')  
+mid_ell18 <- mid_ell18[ -c(1:4, 7, 9, 10)]
+mid_ell18 <- mid_ell18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_ell19 <- mid_ell %>% filter(Year == '2019')  
+mid_ell19 <- mid_ell19[ -c(1:4, 7, 9, 10)]
+mid_ell19 <- mid_ell19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_ell22 <- mid_ell %>% filter(Year == '2022')  
+mid_ell22 <- mid_ell22[ -c(1:4, 7, 9, 10)]
+mid_ell22 <- mid_ell22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_ell23 <- mid_ell %>% filter(Year == '2023') 
+mid_ell23 <- mid_ell23[ -c(1:4, 7, 9, 10)]
+mid_ell23 <- mid_ell23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# this represents the DOT for ELL middle school students
+all_mid_ell <- rbind(mid_ell18, mid_ell19, mid_ell22, mid_ell23)
+
+high_ell <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType == 'High School', GroupName == 'ELL') 
+
+high_ell18 <- high_ell %>% filter(Year == '2018')  
+high_ell18 <- high_ell18[ -c(1:4, 7, 9, 10)]
+high_ell18 <- high_ell18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_ell19 <- high_ell %>% filter(Year == '2019')  
+high_ell19 <- high_ell19[ -c(1:4, 7, 9, 10)]
+high_ell19 <- high_ell19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_ell22 <- high_ell %>% filter(Year == '2022')  
+high_ell22 <- high_ell22[ -c(1:4, 7, 9, 10)]
+high_ell22 <- high_ell22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_ell23 <- high_ell %>% filter(Year == '2023')   
+high_ell23 <- high_ell23[ -c(1:4, 7, 9, 10)]
+high_ell23 <- high_ell23 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# this represents the DOT for ELL high school students
+all_high_ell <- rbind(high_ell18, high_ell19, high_ell22, high_ell23)
+
+# this represents the DOT for all ELL students based on School Level
+all_sch_ell <- rbind(all_ele_ell, all_mid_ell, all_high_ell) 
+
+# averaging counts and percentages for non-proficient and proficient students in the
+  # all_sch_ell variable
+all_sch_ell <- all_sch_ell %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# only keeping the school type, the year, and the mean values calculated above 
+all_sch_ell <- all_sch_ell[ -c(3:11)]
+print(all_sch_ell)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+ell_school_comps <- aov(ME_Percent ~ SchType, data = all_sch_ell)
+summary(ell_school_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of SchType
+ind_ell_school_comps <- TukeyHSD(ell_school_comps)
+ind_ell_school_comps
+```
+
+From the statistical tests above, we can determine that the SchType column has the greatest influence over the variance of sample means, with additional unexplained variance in the data as indicated by the Residuals column.
+
+Interestingly enough, any comparison in SchType that does not consider Elementary Schools is not considered to be statistically significant, as indicated by values greater than 0.05 in the p adj column. The largest statistically significant difference in sample means occurs when comparing Elementary School to Middle School, the second largest is Elementary vs Middle/High School alone, and the smallest difference is Elementary vs High School.
+
+## LEP ELL vs SchType Plot
+
+Taking the ELL vs SchType data, we will compare the proportion of proficient ELL students for each respective School Type being considered. This will allow us to understand how student performances vary based on which Schooling Level they are enrolled in and help us identify years of struggle.
+
+```{r PPSD LEP ELL vs SchType DOT Plot}
+
+# here, we are changing the order in which each School Type is listed in the 
+  # final graph, it will follow what is written in the 'levels' variable
+all_sch_ell <- all_sch_ell %>% 
+  mutate(SchType = factor(SchType, levels = c('Elementary School', 'Middle School', 
+                                              'Middle/High School', 'High School')))
+
+# creating a basic plot using the all_sch_ell variable
+all_sch_ell_plot <- ggplot(all_sch_ell, aes(x = SchType, y = ME_Percent, 
+                    fill = ME_Percent)) + geom_bar(stat = "identity", 
+                    position = "dodge", width = 0.7) + 
+  ggtitle('ELL School Type vs Met or Exceeded Rate') +
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5,
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 4) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Schooling Level") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) +
+  
+  # creates a grid format, separates based on Year and School Type
+  facet_grid(Year~SchType, scales = "free", space = "free") 
+  
+print(all_sch_ell_plot)
+```
+
+From the graph, we can see that ELL student performance was significantly stronger in Elementary School by a significant margin. ELL performance was second highest in High School, and lowest in Middle School. This somewhat aligns with our general data based on School Type, however with ELL students there is a larger gap between Elementary and High School students.
+
+Middle/High School data alone does not provide significant information until 2023, as testing in 2022 yielded no concrete results.
+
+## Analyzing the Dataset (LEP Non-ELL vs SchType)
+
+We will follow the same process above, but now we will consider the performances of Non-ELL students.
+
+```{r PPSD LEP Non-ELL vs SchType DOT}
+
+# filtering providence_data variable based on ELL students in elementary schools only
+ele_nonell <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType == 'Elementary School', GroupName == 'Not ELL')   
+
+# filtering the ele_ell variable based on their performances in ELA, Math, and Science
+ele_nonell18 <- ele_nonell %>% filter(Year == '2018') 
+ele_nonell18 <- ele_nonell18[ -c(1:4, 7, 9, 10)]
+ele_nonell18 <- ele_nonell18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ele_nonell19 <- ele_nonell %>% filter(Year == '2019') 
+ele_nonell19 <- ele_nonell19[ -c(1:4, 7, 9, 10)]
+ele_nonell19 <- ele_nonell19 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ele_nonell22 <- ele_nonell %>% filter(Year == '2022')  
+ele_nonell22 <- ele_nonell22[ -c(1:4, 7, 9, 10)]
+ele_nonell22 <- ele_nonell22 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ele_nonell23 <- ele_nonell %>% filter(Year == '2023')  
+ele_nonell23 <- ele_nonell23[ -c(1:4, 7, 9, 10)]
+ele_nonell23 <- ele_nonell23 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# row binding the yearly ELL elementary school performances
+all_ele_nonell <- rbind(ele_nonell18, ele_nonell19, ele_nonell22, ele_nonell23)
+
+# creating a vector variable to account for schools that are 6-8 and 6-12
+names <- c('Middle School', 'Middle/High School')
+
+# filtering providence_data variable based on middle school students 
+# only including middle/high schools once
+mid_nonell <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType %in% m_names, GroupName == 'Not ELL') 
+
+# filtering the mid_ell variable based on their performances in ELA, Math, Science yearly
+mid_nonell18 <- mid_nonell %>% filter(Year == '2018')  
+mid_nonell18 <- mid_nonell18[ -c(1:4, 7, 9, 10)]
+mid_nonell18 <- mid_nonell18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_nonell19 <- mid_nonell %>% filter(Year == '2019')  
+mid_nonell19 <- mid_nonell19[ -c(1:4, 7, 9, 10)]
+mid_nonell19 <- mid_nonell19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_nonell22 <- mid_nonell %>% filter(Year == '2022')  
+mid_nonell22 <- mid_nonell22[ -c(1:4, 7, 9, 10)]
+mid_nonell22 <- mid_nonell22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+mid_nonell23 <- mid_nonell %>% filter(Year == '2023') 
+mid_nonell23 <- mid_nonell23[ -c(1:4, 7, 9, 10)]
+mid_nonell23 <- mid_nonell23 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# row binding the yearly ELL middle school performances
+all_mid_nonell <- rbind(mid_nonell18, mid_nonell19, mid_nonell22, mid_nonell23)
+
+# filtering providence_data variable based on high school students 
+high_nonell <- providence_data %>% group_by(SchType) %>% 
+  filter(SchType == 'High School', GroupName == 'Not ELL')
+
+# filtering the high_ell variable based on their performances in ELA, Math, and Science 
+high_nonell18 <- high_nonell %>% filter(Year == '2018')  
+high_nonell18 <- high_nonell18[ -c(1:4, 7, 9, 10)]
+high_nonell18 <- high_nonell18 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_nonell19 <- high_nonell %>% filter(Year == '2019')  
+high_nonell19 <- high_nonell19[ -c(1:4, 7, 9, 10)]
+high_nonell19 <- high_nonell19 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_nonell22 <- high_nonell %>% filter(Year == '2022')  
+high_nonell22 <- high_nonell22[ -c(1:4, 7, 9, 10)]
+high_nonell22 <- high_nonell22 %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+high_nonell23 <- high_nonell %>% filter(Year == '2023')   
+high_nonell23 <- high_nonell23[ -c(1:4, 7, 9, 10)]
+high_nonell23 <- high_nonell23 %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# row binding the yearly ELL high school performances
+all_high_nonell <- rbind(high_nonell18, high_nonell19, high_nonell22, high_nonell23)
+
+# row binding the data over time ELL school performances
+all_sch_nonell <- rbind(all_ele_nonell, all_mid_nonell, all_high_nonell) 
+
+# averaging counts and percentages for non-proficient and proficient students in the all_sch_ell variable
+all_sch_nonell <- all_sch_nonell %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# only keeping the school type, the year, and the mean values calculated above 
+all_sch_nonell <- all_sch_nonell[ -c(3:11)]
+
+# row binding the DOT Non-ELL and ELL school performances
+all_sch_lep <- rbind(all_sch_ell, all_sch_nonell) 
+
+# adding in the GroupName column to differentiate ELL and Non-ELL performances
+# adding in the GroupName column to differentiate ELL and Non-ELL performances, here
+  # we will use the 'rep' function, which will repeat the element written in the 
+  # first slot based on the value in the second slot
+all_sch_lep$GroupName <- c(rep('ELL', 14), rep('Not ELL', 14))
+all_sch_lep <- all_sch_lep %>% relocate(GroupName, .after = SchType)
+
+# printing the combined dataset, using 'n = ' to print every row of the data
+print(all_sch_lep, n = 28)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+all_school_comps <- aov(ME_Percent ~ GroupName, data = all_sch_lep)
+summary(all_school_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of GroupName
+ind_all_school_comps <- TukeyHSD(all_school_comps)
+ind_all_school_comps
+
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means, with additional unexplained variance in the data as indicated by the Residuals column.
+
+## Analyzing the Dataset (LEP vs Neighborhood)
+
+We will now consider how the location of a school effects student performance.
+
+**\*\*Note:** The economic status of a neighborhood does not indicate the economic status of a school or the students enrolled. Based on the application process designed by the Rhode Island Department of Education (RIDE), students are more likely to be enrolled in schools within a 1.5 mile radius of their home, hence they are likely to live in the same neighborhood in which their school is located.
+
+```{r PPSD LEP vs Neighborhood}
+# filtering providence_data variable based on ELL students, grouping by the Neighborhood
+# Science is not included since not every school conducts yearly testing
+ell_neighbor_data <- providence_data %>% group_by(Neighborhood) %>% 
+  filter(GroupName == 'ELL', TestSubject != 'Science')  
+
+# computing averages for ell students grouped into neighborhoods
+ell_charles <- ell_neighbor_data %>% filter(Neighborhood == 'Charles') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+ell_college <- ell_neighbor_data %>% filter(Neighborhood == 'College Hill') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+ell_elmhurst <- ell_neighbor_data %>% filter(Neighborhood == 'Elmhurst') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_elmwood <- ell_neighbor_data %>% filter(Neighborhood == 'Elmwood') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_federal <- ell_neighbor_data %>% filter(Neighborhood == 'Federal Hill') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_fox <- ell_neighbor_data %>% filter(Neighborhood == 'Fox Point') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_freeman <- ell_neighbor_data %>% 
+  filter(Neighborhood == 'Freeman Plat Historic District') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_greenville <- ell_neighbor_data %>% filter(Neighborhood == 'Greenville') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+ell_hartford <- ell_neighbor_data %>% filter(Neighborhood == 'Hartford') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_lsp <- ell_neighbor_data %>% 
+  filter(Neighborhood == 'Lower South Providence') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+ell_hope <- ell_neighbor_data %>% filter(Neighborhood == 'Mount Hope') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_pleasant <- ell_neighbor_data %>% filter(Neighborhood == 'Mount Pleasant') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_olney <- ell_neighbor_data %>% filter(Neighborhood == 'Olneyville') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_reservoir <- ell_neighbor_data %>% filter(Neighborhood == 'Reservoir') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_silver <- ell_neighbor_data %>% filter(Neighborhood == 'Silver Lake') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_smith <- ell_neighbor_data %>% filter(Neighborhood == 'Smith Hill') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_wanskuck <- ell_neighbor_data %>% filter(Neighborhood == 'Wanskuck') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+ell_park <- ell_neighbor_data %>% filter(Neighborhood == 'Washington Park') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+ell_west <- ell_neighbor_data %>% filter(Neighborhood == 'West End') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# we repeat this same process for Non-ELL students
+nonell_neighbor_data <- providence_data %>% group_by(Neighborhood) %>% 
+  filter(GroupName == 'Not ELL', TestSubject != 'Science')  
+
+nonell_charles <- nonell_neighbor_data %>% filter(Neighborhood == 'Charles') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+nonell_college <- nonell_neighbor_data %>% filter(Neighborhood == 'College Hill') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+nonell_elmhurst <- nonell_neighbor_data %>% filter(Neighborhood == 'Elmhurst') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_elmwood <- nonell_neighbor_data %>% filter(Neighborhood == 'Elmwood') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_federal <- nonell_neighbor_data %>% 
+  filter(Neighborhood == 'Federal Hill') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_fox <- nonell_neighbor_data %>% filter(Neighborhood == 'Fox Point') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+nonell_freeman <- nonell_neighbor_data %>% 
+  filter(Neighborhood == 'Freeman Plat Historic District') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_greenville <- nonell_neighbor_data %>% filter(Neighborhood == 'Greenville') %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_hartford <- nonell_neighbor_data %>% filter(Neighborhood == 'Hartford') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+nonell_lsp <- nonell_neighbor_data %>% 
+  filter(Neighborhood == 'Lower South Providence') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+nonell_hope <- nonell_neighbor_data %>% filter(Neighborhood == 'Mount Hope') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_pleasant <- nonell_neighbor_data %>% 
+  filter(Neighborhood == 'Mount Pleasant') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_olney <- nonell_neighbor_data %>% filter(Neighborhood == 'Olneyville') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+nonell_reservoir <- nonell_neighbor_data %>% filter(Neighborhood == 'Reservoir') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_silver <- nonell_neighbor_data %>% filter(Neighborhood == 'Silver Lake') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_smith <- nonell_neighbor_data %>% filter(Neighborhood == 'Smith Hill') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_wanskuck <- nonell_neighbor_data %>% filter(Neighborhood == 'Wanskuck') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_park <- nonell_neighbor_data %>% filter(Neighborhood == 'Washington Park') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+nonell_west <- nonell_neighbor_data %>% filter(Neighborhood == 'West End') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# combining each neighborhood ell data
+ell_neighbors <- rbind(ell_charles, ell_college, ell_elmhurst, ell_elmwood, 
+                       ell_federal, ell_fox, ell_freeman, ell_greenville, 
+                       ell_hartford, ell_lsp, ell_hope, ell_pleasant, ell_olney, 
+                       ell_reservoir, ell_silver, ell_smith, ell_wanskuck, 
+                       ell_park, ell_west)
+
+# adding 'ELL' to GroupName column before we combine with Non-ELL data
+ell_neighbors$GroupName <- "ELL" 
+ell_neighbors <- ell_neighbors %>% relocate(GroupName, .after = Neighborhood)
+
+# averaging counts and percentages for non-proficient and proficient students 
+ell_neighbors <- ell_neighbors %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+# removing columns that do not include GroupName and numeric averages
+ell_neighbors <- ell_neighbors[ -c(3:12) ]
+
+# repeating the process with Non-ELL students
+nonell_neighbors <- rbind(nonell_charles, nonell_college, nonell_elmhurst, 
+                          nonell_elmwood, nonell_federal, nonell_fox, 
+                          nonell_freeman, nonell_greenville, nonell_hartford, 
+                          nonell_lsp, nonell_hope, nonell_pleasant, nonell_olney,
+                          nonell_reservoir, nonell_silver, nonell_smith,
+                          nonell_wanskuck, nonell_park, nonell_west)
+
+nonell_neighbors$GroupName <- "Not ELL"
+nonell_neighbors <- nonell_neighbors %>% relocate(GroupName, .after = Neighborhood)
+
+nonell_neighbors <- nonell_neighbors %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count)) %>% 
+  mutate(NonME_Count = (Level_1_Count + Level_2_Count)) %>% 
+  mutate(ME_Percent = (ME_Count/Total_Count * 100)) %>% 
+  mutate(NonME_Percent = NonME_Count/Total_Count * 100)
+
+nonell_neighbors <- nonell_neighbors[ -c(3:12) ]
+
+# creating our final neighborhood data variable
+all_neighbors <- rbind(ell_neighbors, nonell_neighbors)
+print(all_neighbors, n = 38) 
+```
+
+## ELL Neighbors Plot
+
+Taking the ELL Neighbors data, we will compare the proportion of proficient ELL students for each respective of the Neighborhood being considered. This will allow us to understand how student performances vary based on where they are enrolled as well as if Neighborhood performance is consistent or if outliers exist. they are enrolled in and help us identify years of struggle.
+
+```{r PPSD ELL Neighborhood Plot}
+
+# fct_reorder will change the order of how the Neighborhoods are listed to be 
+  # dependent on ME_Percent, in our case, lowest to highest
+ell_neighbors <- ell_neighbors %>% 
+  mutate(Neighborhood = fct_reorder(Neighborhood, ME_Percent))
+
+# creating a basic plot using the ell_neighbors variable
+ell_neighbors_plot <- ggplot(ell_neighbors, aes(x = Neighborhood, y = ME_Percent, 
+                      fill = ME_Percent)) + geom_bar(stat = "identity", 
+                      position = "dodge", width = 0.7) + 
+  ggtitle('PPSD ELL Neighbor Data vs Met or Exceeded Rate') +
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 2))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 90)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 10) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Neighborhood") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100))  
+
+print(ell_neighbors_plot) 
+```
+
+Each neighborhood falls into the same rate of 10% of ELL students testing at a proficient level with the exception of Fox Point, and to a lesser extent, Olneyville. The presence of economic factors could be considered as a reason between the discrepancy of performance, as Fox Point is classified as a wealthier community.
+
+However, Olneyville and Silver Lake, which occupy the second and third highest proficientcy rates, are both classified as less wealthy communities. This also applies to the lower end of the proficiency, as both College Hill and the Freeman Plat Historic District are considered as wealthier neighborhoods, while Charles is considered a a less wealthy community. Thus, we cannot identify economic difference as the reason for this discrepancy, especially since the majority of neighborhoods are performing within the same range of proficiency.
+
+## ------------------------------------------------------------------------------------------------------
+
+# Working with the Charter Dataset
+
+## ------------------------------------------------------------------------------------------------------
+
+## Analyzing the Dataset (Charter ELL vs Non-ELL)
+
+After investigating ELL and Non-ELL student performance in the PPSD, we need to consider how the inclusion of Charter Schools have influenced the proportion of proficient students. Charter Schools operate under a set of written agreements (charters) that are influenced by students and families in order to target specific issues highlighted by the community.
+
+Not every student is guaranteed enrollment into Charter Schools, as demand continues to grow. However, it is important to consider the effects of Charter Schools on students who are enrolled, and if Charter Schools should continue to serve as a broader solution for the PPSD.
+
+```{r Charter ELL vs Non-ELL}
+
+# filtering to only consider ELL students tested in ELA and Math
+charter_gen_ell <- charter_data %>% group_by(GroupName) %>% 
+  filter(GroupName == 'ELL', TestSubject != 'Science') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)    
+
+# averaging counts and percentages for non-proficient and proficient students 
+charter_gen_ell <- charter_gen_ell %>%
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing columns that do not include GroupName and numeric averages
+charter_gen_ell <- charter_gen_ell[ -c(2:10) ] 
+
+# following the same process for Non-ELL students in Charter Schools
+charter_gen_nonell <- charter_data %>% group_by(GroupName) %>% 
+  filter(GroupName == 'Not ELL', TestSubject != 'Science') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)     
+
+charter_gen_nonell <- charter_gen_nonell %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_gen_nonell <- charter_gen_nonell[ -c(2:10) ] 
+
+# combining Charter ELL and Non-ELL data
+charter_gen <- rbind(charter_gen_ell, charter_gen_nonell)
+print(charter_gen)
+```
+
+## Charter LEP General Plot
+
+Taking the General Charter data, we will compare the proportion of proficient ELL and Non-ELL students enrolled. This will allow us to understand the discrepancy in performance between ELL and Non-ELL students, and later we will compare our Charter ELL and Non-ELL data with our Non-Charter ELL and Non-ELL data to determine how much the proportion of proficient students rose for each group.
+
+```{r Charter LEP General Plot}
+# creating a basic plot using the charterME_neighbors variable
+charterME_plot <- ggplot(charter_gen, aes(x = GroupName, y = ME_Percent, 
+                  fill = ME_Percent)) + geom_bar(stat = "identity", 
+                  position = "dodge", width = 0.7) + 
+  ggtitle('LEP Charter Students vs Met or Exceeded Rate') +
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 20) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="LEP Student") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) 
+
+print(charterME_plot)
+```
+
+Performance for both ELL and Non-ELL students increased when enrolled in Charter Schools, however a large discrepancy in performance still exists.
+
+## Analyzing the Dataset (Charter DOT)
+
+We will now break down the above data and investigate how the performances of LEP students enrolled in Charter Schools changed on a year by year basis. We will later compare this data to students enrolled in the PPSD to compare and contrast how both schools were effected and recovered from Covid.
+
+```{r Charter DOT}
+# we include this step as our Year column is listed as an integer instead of a 
+  # factor, if we kept it as an integer, it would mess up how the graphs are 
+  # created
+charter_data$Year <- as.factor(charter_data$Year)  
+
+# filtering to consider students tested in ELA and Math in 2018
+charter_18 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# averaging counts and percentages for non-proficient and proficient students 
+charter_18 <- charter_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+charter_18 <- charter_18[ -c(2:10)] 
+
+# following the same process, with Charter students tested in ELA and Math in 2019
+charter_19 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_19 <- charter_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_19 <- charter_19[ -c(2:10)] 
+
+# following the same process, with Charter students tested in ELA and Math in 2022
+charter_22 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_22 <- charter_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_22 <- charter_22[ -c(2:10)] 
+
+# following the same process, with Charter students tested in ELA and Math in 2023
+charter_23 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_23 <- charter_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_23 <- charter_23[ -c(2:10) ]
+
+# creating the Charter DOT variable
+charter_years <- rbind(charter_18, charter_19, charter_22, charter_23)
+print(charter_years)
+```
+
+## Charter DOT Plot
+
+Taking the General Charter DOT data, we will compare the proportion of proficient LEP students enrolled based on the year testing was conducted. This will allow us to understand the discrepancy in performance between years, specifically how LEP students returned and adjusted to in-person instruction Post-Covid.
+
+```{r Charter DOT Plot}
+# creating a basic plot using the charter_years variable
+charter_years_plot<- ggplot(charter_years, aes(x = Year, y = ME_Percent, 
+                     fill = ME_Percent)) + geom_bar(stat = "identity", 
+                     position = "dodge", width = 0.75) + 
+  ggtitle('LEP Charter Data Over Time vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 2))), vjust = -1, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 30) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Time Frame") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5, 100)) 
+
+print(charter_years_plot)  
+
+```
+
+Pre-Covid, LEP students enrolled in Charter Schools were performing very closely to the proficiency standard as indicated by the NAEP. Between $2018$ and $2019$, student proficiency grew by about $5\%$. However, LEP students experienced a large drop in performance between $2019$ and $2022$ ($14\%$). Additionally, students struggled to re-adjust to in-person instruction, as there was only a growth of about $3\%$ between $2022$ and $2023$.
+
+## Analyzing the Dataset (Charter LEP DOT)
+
+We are aware of how LEP student performance in Charter Schools changed over the years, including the influence of Covid. Now, we must consider how ELL and Non-ELL student performances in Charter Schools differ, to determine whether there is an unfair advantage one group has over the other.
+
+```{r Charter LEP DOT}
+
+# filtering to consider ELL students tested in ELA and Math in 2018
+charter_ell18 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2018', GroupName == 'ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# averaging counts and percentages for non-proficient and proficient students 
+charter_ell18 <- charter_ell18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+charter_ell18 <- charter_ell18[ -c(2:10)] 
+
+# following the same process, for ELL students tested in ELA and Math in 2019
+charter_ell19 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2019', GroupName == 'ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_ell19 <- charter_ell19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_ell19 <- charter_ell19[ -c(2:10)] 
+
+# following the same process, for ELL students tested in ELA and Math in 2022
+charter_ell22 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2022', GroupName == 'ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_ell22 <- charter_ell22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_ell22 <- charter_ell22[ -c(2:10)] 
+
+# following the same process, for ELL students tested in ELA and Math in 2023
+charter_ell23 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2023', GroupName == 'ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_ell23 <- charter_ell23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_ell23 <- charter_ell23[ -c(2:10)] 
+
+# creating the Charter ELL DOT variable
+charter_ell_years <- rbind(charter_ell18, charter_ell19, charter_ell22, charter_ell23)
+print(charter_ell_years)
+
+# following the same process, for Non-ELL students tested in ELA and Math in 2018
+charter_nonell18 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2018', GroupName == 'Not ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_nonell18 <- charter_nonell18 %>%  
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_nonell18 <- charter_nonell18[ -c(2:10)] 
+
+# following the same process, for Non-ELL students tested in ELA and Math in 2019
+charter_nonell19 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2019', GroupName == 'Not ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_nonell19 <- charter_nonell19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_nonell19 <- charter_nonell19[ -c(2:10)] 
+
+# following the same process, for Non-ELL students tested in ELA and Math in 2022
+charter_nonell22 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2022', GroupName == 'Not ELL') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_nonell22 <- charter_nonell22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_nonell22 <- charter_nonell22[ -c(2:10)] 
+
+# following the same process, for Non-ELL students tested in ELA and Math in 2023
+charter_nonell23 <- charter_data %>% group_by(Year) %>% 
+  filter(TestSubject != 'Science', Year == '2023', GroupName == 'Not ELL') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_nonell23 <- charter_nonell23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_nonell23 <- charter_nonell23[ -c(2:10)] 
+
+# creating the Charter Non-ELL DOT variable
+charter_nonell_years <- rbind(charter_nonell18, charter_nonell19, 
+                              charter_nonell22, charter_nonell23)
+print(charter_nonell_years) 
+
+# creating the Charter LEP DOT variable
+charter_lep_years <- rbind(charter_ell_years, charter_nonell_years) 
+
+# adding in the values of "ELL" and "Not ELL" to distinguish perfomances
+charter_lep_years$GroupName <- c(rep("ELL", 4), rep("Not ELL", 4)) 
+charter_lep_years <- charter_lep_years %>% relocate(GroupName, .after = Year)
+print(charter_lep_years)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+charter_school_comps <- aov(ME_Percent ~ GroupName, data = charter_lep_years)
+summary(charter_school_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of GroupName
+ind_charter_school_comps <- TukeyHSD(charter_school_comps)
+ind_charter_school_comps
+
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means. Additionally, unexplained variance exists in the data as indicated by the Residuals column, however its overall influence is not comparable to that of the GroupName column.
+
+## Charter LEP DOT Plot
+
+Taking the Charter LEP DOT data, we will compare the proportion of proficient ELL and Non-ELL students enrolled based on the year testing was conducted. This will allow us to understand the discrepancy in performance between years, specifically how ELL and Non-ELL students returned and adjusted to in-person instruction Post-Covid.
+
+```{r Charter LEP DOT Plot}
+
+# creating a basic plot using the charter_lep_years variable
+charter_lep_years_plot<- ggplot(charter_lep_years, aes(x = GroupName, y = ME_Percent, 
+                         fill = ME_Percent)) + geom_bar(stat = "identity", 
+                         position = "dodge", width = 0.75) + 
+  ggtitle('LEP Charter Data Over Time vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 2))), vjust = -1, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 20) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Time Frame") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 100)) +
+  coord_cartesian(ylim = c(5, 102)) + 
+  
+  # creates a grid format, separates based on Year column
+  facet_grid(~Year, scales = "free", space = "free")
+print(charter_lep_years_plot) 
+```
+
+Like in the PPSD, Not ELL performance in Charter Schools is significantly higher than ELL performance. This gap in achievement lessened slightly between $2018$ and $2019$ ($16\%$ vs $15\%$ respectively), however ELL students experienced a greater loss between $2019$ and $2022$ compared to Non-ELL students ($14\%$ vs $12.5\%$ respectively).
+
+However, ELL students did experience better re-adjustment to in-person instruction compared to Non-ELL students ($3.5\%$ vs $3\%$ respectively), which was found by comparing $2022$ and $2023$ proficiency rates.
+
+## Analyzing the Dataset (Charter LEP vs SchType)
+
+After considering the gap in performance between ELL students and Non-ELL students, we will consider the impact that School Level (Elementary, Middle, High) had on the performances of students. This will indicate if ELL and Non-ELL performances are consistent across all School Levels, or if variation exists.
+
+```{r Charter LEP SchType}
+
+# filtering to consider ELL students based on School Type 
+charter_schtype_ell <- charter_data %>% group_by(SchType) %>% 
+  filter(GroupName == 'ELL') %>% summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students 
+charter_schtype_ell <- charter_schtype_ell %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# changing 'NA' values to '0'
+charter_schtype_ell[is.na(charter_schtype_ell)] <- 0
+
+# removing unnecessary columns
+charter_schtype_ell <- charter_schtype_ell[ -c(2:10) ]
+
+# adding in the GroupName column with values of ELL and relocating
+charter_schtype_ell$GroupName <- 'ELL'  
+charter_schtype_ell <- charter_schtype_ell %>% relocate(GroupName, .after = SchType)
+
+# following the same process, for Non-ELL students based on School Type
+charter_schtype_nonell <- charter_data %>% group_by(SchType) %>% 
+  filter(GroupName == 'Not ELL') %>% summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+charter_schtype_nonell <- charter_schtype_nonell %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charter_schtype_nonell[is.na(charter_schtype_nonell)] <- 0
+
+charter_schtype_nonell <- charter_schtype_nonell[ -c(2:10) ]
+
+charter_schtype_nonell$GroupName <- 'Non ELL'  
+charter_schtype_nonell <- charter_schtype_nonell %>% relocate(GroupName, .after = SchType)
+
+# creating the LEP School Type variable
+charter_schtype_lep <- rbind(charter_schtype_ell, charter_schtype_nonell)  
+
+# getting rid of the 11th row, which appears as 'NA'
+charter_schtype_lep <- charter_schtype_lep[ -c(11, nrow(charter_schtype_lep)), ]
+print(charter_schtype_lep, n = 20) 
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+charter_schtype_comps <- aov(ME_Percent ~ GroupName, data = charter_schtype_lep)
+summary(charter_schtype_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of GroupName
+ind_charter_schtype_comps <- TukeyHSD(charter_schtype_comps)
+ind_charter_schtype_comps
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means. Additionally, unexplained variance exists in the data as indicated by the Residuals column, however its overall influence is not comparable to that of the GroupName column.
+
+## Charter LEP vs SchType Plot
+
+Taking the Charter LEP SchType data, we will compare the proportion of proficient ELL and Non-ELL students enrolled based on Schooling Level. This will allow us to understand the discrepancy in performance between Schooling Levels, and allow us to determine whether the issue is widespread or needs to be targeted within specific Schooling Levels.
+
+```{r Charter LEP SchType Plot}
+
+# reordering the placement of values in the SchType variable using 'factor'
+charter_schtype_lep$SchType <- factor(charter_schtype_lep$SchType, 
+                                levels = c("PK-12", "K-12", "9-12", "7-12", "6-12", 
+                                           "6-8", "5-8", "K-8", "K-5", "K-4"))
+
+# creating a basic plot using the charter_schtype_lep variable
+charter_schtype_plot<- ggplot(charter_schtype_lep, aes(x = SchType, y = ME_Percent, 
+                       fill = ME_Percent)) + geom_bar(stat = "identity",
+                       position = "dodge", width = 0.75) + 
+  ggtitle('LEP Charter School Types vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 2))), vjust = -1, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 25) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Schooling Type") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 100)) +
+  coord_cartesian(ylim = c(5, 102)) + 
+  
+  # creates a grid format, separates based on GroupType and SchType columns
+  facet_grid(GroupName ~ SchType, scales = "free", space = "free")
+print(charter_schtype_plot)   
+```
+
+In terms of ELL performance, K-8 is the only grade range above $10\%$, with the closest being K-5 ($8.68\%$). The same is true for Non-ELL students, as the highest two values are $39.66\%$ (K-5) and $39.36\%$ (K-8).
+
+However, ELL performance appears to be much more consistent, all typically falling between the $3\%$ to $8\%$ range, whereas Non-ELL performance typically falls between $5\%$ and $30\%$. In this case, we are ignoring the performance rates of ELL students that have values of $0$, as this indicates that no data was present for the specific School Types.
+
+## Analyzing the Dataset (Charter LEP vs TestSubject DOT)
+
+Finally, we will consider how Charter LEP student performance varies across different Test Subjects being considered as well as what year a student was tested. Breaking apart performances based on Test Subject will allow us to understand whether students struggle in a particular area of learning, or learning in general on a year by year basis.
+
+```{r Charter LEP TestSubject DOT, warning=FALSE}
+
+# filtering to consider ELL students tested in ELA in 2018
+charterell_ELA_18 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'ELA', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students 
+charterell_ELA_18 <- charterell_ELA_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+charterell_ELA_18 <- charterell_ELA_18[ -c(2:10)] 
+
+# following the same process, for ELL students tested in ELA in 2019 
+charterell_ELA_19 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'ELA', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_ELA_19 <- charterell_ELA_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_ELA_19 <- charterell_ELA_19[ -c(2:10)]  
+
+# following the same process, for ELL students tested in ELA in 2022
+charterell_ELA_22 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'ELA', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_ELA_22 <- charterell_ELA_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_ELA_22 <- charterell_ELA_22[ -c(2:10)]  
+
+# following the same process, for ELL students tested in ELA in 2023
+charterell_ELA_23 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'ELA', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_ELA_23 <- charterell_ELA_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_ELA_23 <- charterell_ELA_23[ -c(2:10)]  
+
+# following the same process, for ELL students tested in Math in 2018
+charterell_Math_18 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'Math', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_Math_18 <- charterell_Math_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_Math_18 <- charterell_Math_18[ -c(2:10)]  
+
+# following the same process, for ELL students tested in Math in 2019
+charterell_Math_19 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'Math', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_Math_19 <- charterell_Math_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_Math_19 <- charterell_Math_19[ -c(2:10)]  
+
+# following the same process, for ELL students tested in Math in 2022
+charterell_Math_22 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'Math', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_Math_22 <- charterell_Math_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_Math_22 <- charterell_Math_22[ -c(2:10)]  
+
+# following the same process, for ELL students tested in Math in 2023
+charterell_Math_23 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'Math', Year == '2023') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charterell_Math_23 <- charterell_Math_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charterell_Math_23 <- charterell_Math_23[ -c(2:10)]  
+
+# creating the Charter ELL ELA DOT variable and adding TestSubject variable
+charter_ell_ELA <- rbind(charterell_ELA_18, charterell_ELA_19, 
+                         charterell_ELA_22, charterell_ELA_23)
+charter_ell_ELA$TestSubject <- 'ELA'
+
+# creating the Charter ELL Math DOT variable and adding TestSubject variable
+charter_ell_Math <- rbind( charterell_Math_18, charterell_Math_19, 
+                           charterell_Math_22, charterell_Math_23)
+charter_ell_Math$TestSubject <- 'Math'
+
+# creating the Charter ELL Subject DOT variable
+charter_ell_subject <- rbind(charter_ell_ELA, charter_ell_Math)
+
+# adding the value of 'ELL' into the groupname column and changing the format 
+charter_ell_subject$GroupName <- 'ELL' 
+charter_ell_subject <- charter_ell_subject %>% relocate(GroupName, .after = Year) %>%
+  relocate(TestSubject, .after = GroupName) 
+
+# following the same process, for Non-ELL students tested in ELA in 2018
+charternonell_ELA_18 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'ELA', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_ELA_18 <- charternonell_ELA_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_ELA_18 <- charternonell_ELA_18[ -c(2:10)] 
+
+# following the same process, for Non-ELL students tested in ELA in 2019
+charternonell_ELA_19 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'ELA', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_ELA_19 <- charternonell_ELA_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_ELA_19 <- charternonell_ELA_19[ -c(2:10)]  
+
+# following the same process, for Non-ELL students tested in ELA in 2022
+charternonell_ELA_22 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'ELA', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_ELA_22 <- charternonell_ELA_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_ELA_22 <- charternonell_ELA_22[ -c(2:10)]  
+
+# following the same process, for Non-ELL students tested in ELA in 2023
+charternonell_ELA_23 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'ELA', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_ELA_23 <- charternonell_ELA_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_ELA_23 <- charternonell_ELA_23[ -c(2:10)]  
+
+# following the same process, for Non-ELL students tested in Math in 2018
+charternonell_Math_18 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'Math', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_Math_18 <- charternonell_Math_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_Math_18 <- charternonell_Math_18[ -c(2:10)]  
+
+# following the same process, for Non-ELL students tested in Math in 2019
+charternonell_Math_19 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'Math', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_Math_19 <- charternonell_Math_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_Math_19 <- charternonell_Math_19[ -c(2:10)]  
+
+# following the same process, for Non-ELL students tested in Math in 2022
+charternonell_Math_22 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'Math', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_Math_22 <- charternonell_Math_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_Math_22 <- charternonell_Math_22[ -c(2:10)]  
+
+# following the same process, for Non-ELL students tested in Math in 2023
+charternonell_Math_23 <- charter_data %>% group_by(Year) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'Math', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+charternonell_Math_23 <- charternonell_Math_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+charternonell_Math_23 <- charternonell_Math_23[ -c(2:10)]  
+
+# creating the Charter Non-ELL ELA DOT variable and adding TestSubject variable
+charter_nonell_ELA <- rbind(charternonell_ELA_18, charternonell_ELA_19, 
+                            charternonell_ELA_22, charternonell_ELA_23)
+charter_nonell_ELA$TestSubject <- 'ELA'
+
+# creating the Charter Non-ELL Math DOT variable and adding TestSubject variable
+charter_nonell_Math <- rbind(charternonell_Math_18, charternonell_Math_19, 
+                             charternonell_Math_22, charternonell_Math_23)
+charter_nonell_Math$TestSubject <- 'Math'
+
+# creating the Charter Non-ELL Subject DOT variable
+charter_nonell_subject <- rbind(charter_nonell_ELA, charter_nonell_Math)
+
+# adding the value of 'Not ELL' into the groupname column and changing the format 
+charter_nonell_subject$GroupName <- 'Not ELL' 
+charter_nonell_subject <- charter_nonell_subject %>% 
+  relocate(GroupName, .after = Year) %>% relocate(TestSubject, .after = GroupName) 
+
+# creating the Charter LEP Subject DOT variable
+charter_lep_subjects <- rbind(charter_ell_subject, charter_nonell_subject) 
+print(charter_lep_subjects) 
+
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+charter_lep_subjects_comps <- aov(ME_Percent ~ TestSubject + GroupName + Year, 
+                                  data = charter_lep_subjects)
+summary(charter_lep_subjects_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of GroupName, TestSubject 
+  # and Year.
+ind_charter_lep_subjects_comps <- TukeyHSD(charter_lep_subjects_comps)
+ind_charter_lep_subjects_comps
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means, followed by the Year column, and lastly, by the TestSubject column. Additionally, unexplained variance exists in the data as indicated by the Residuals column, however its overall influence is not comparable to that of the other statistically significant columns
+
+## Charter LEP vs TestSubject DOT Plot
+
+Taking the Charter LEP TestSubject DOT data, we will compare the proportion of proficient ELL and Non-ELL students enrolled based on the Test Subject being administered as well as the Year the test was conducted. This will allow us to understand the discrepancy in performance between Test Subjects, and how they varied throughout the years in our study.
+
+We will also be able to determine if students had an easier or harder time learning a Test Subject after returning to in-person instruction, or if the learning recovery for both Test Subjects was consistent.
+
+```{r Charter LEP TestSubject DOT Plot}
+
+# creating a basic plot using the charter_lep_subjects variable
+charter_lep_subjects_plot<- ggplot(charter_lep_subjects, aes(x = Year, y = ME_Percent, 
+                            fill = ME_Percent)) + geom_bar(stat = "identity",
+                            position = "dodge", width = 0.75) + 
+  ggtitle('LEP Charter School Subjects DOT vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 2))), vjust = -1, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'),  
+        axis.text.x = element_text(angle = 0)) +  
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 23) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name="Time Frame") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 100)) +
+  coord_cartesian(ylim = c(5, 100)) + 
+  
+  # creates a grid format, separates based on TestSubject and GroupName columns
+  facet_grid(TestSubject ~ GroupName, scales = "free", space = "free")
+print(charter_lep_subjects_plot) 
+```
+
+ELL performances were relatively similar Pre-Covid, however they were doing significantly better in ELA ($24.03\%$) compared to Math ($18.53\%$). However, ELA performance dropped below Math performance in $2022$, ($6.22$ vs $7.26$), and students recovered at a slower rate in ELA ($3.5\%$) compared to Math ($4\%$) in $2023$.
+
+Non-ELL students performed significantly stronger in ELA compared to Math each year. Additionally, students experienced larger Learning Loss in ELA ($13\%$) compared to Math ($12\%$), and a similar rate of Learning Recovery in both subjects ($3\%$).
+
+## ------------------------------------------------------------------------------------------------------
+
+# Comparing Charter vs Non-Charter
+
+## ------------------------------------------------------------------------------------------------------
+
+## Analyzing the Dataset (CNC ELL vs TestSubject)
+
+We will now combine our Charter and Non-Charter data and make comparisons between ELL and Non-ELL performance. This will allow us to better identify the connections and trends between Charter and Non-Charter data as well as how student performance differs between the two.
+
+**\*\*Note:** For simplicity's sake, we will be denoting Charter Schools with the letter 'C' and Non-Charter Schools with the letters 'NC'. In this case, Non-Charter Schools are the schools that are part of the PPSD.
+
+```{r CNC ELL TestSubject, warning=FALSE}
+
+# filtering to only consider Non-Charter ELL students tested in Math 
+NC_ell_math <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'Math', Charter == 'No') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)    
+
+# averaging counts and percentages for non-proficient and proficient students 
+NC_ell_math <- NC_ell_math %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+NC_ell_math <- NC_ell_math[ -c(2:10)] 
+
+# following the same process, with Non-Charter ELL students tested in ELA
+NC_ell_ela <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'ELA', Charter == 'No') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)      
+
+NC_ell_ela <- NC_ell_ela %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_ela <- NC_ell_ela[ -c(2:10)] 
+
+# combining the data for Non-Charter ELL students divided by subjects
+NC_ell_subjects <- rbind(NC_ell_math, NC_ell_ela)
+
+# following the same process, with Charter ELL students tested in ELA
+C_ell_ela <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'ELA', Charter == 'Yes') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)   
+
+C_ell_ela <- C_ell_ela %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_ela <- C_ell_ela[ , -c(2:10)] 
+
+# following the same process, with Charter ELL students tested in Math
+C_ell_math <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', TestSubject == 'Math', Charter == 'Yes') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)  
+
+C_ell_math <- C_ell_math %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_math <- C_ell_math[ , -c(2:10)] 
+
+# combining the data for Charter ELL students divided by subjects
+C_ell_subjects <- rbind(C_ell_math, C_ell_ela)
+
+# combining the data for Non-Charter and Charter ELL students divided by subjects
+CNC_ell_subjects <- rbind(NC_ell_subjects, C_ell_subjects)
+CNC_ell_subjects <- CNC_ell_subjects[ -c(2:6) ] 
+
+# adding in the corresponding TestSubject values to the final variable
+CNC_ell_subjects$TestSubject <- c("ELA", "Math", "ELA", "Math") 
+CNC_ell_subjects <- CNC_ell_subjects %>% relocate(TestSubject, .after = Charter)
+print(CNC_ell_subjects)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+CNC_ell_subjects_comps <- aov(ME_Percent ~ Charter + TestSubject, data = CNC_ell_subjects)
+summary(CNC_ell_subjects_comps)
+        
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of Charter and TestSubject 
+ind_CNC_ell_subjects_comps <- TukeyHSD(CNC_ell_subjects_comps)
+ind_CNC_ell_subjects_comps
+```
+
+From the statistical tests above, we can determine that the Charter column has the greatest influence over the variance of sample means, whereas the influence of the TestSubject column is not statistically significant.
+
+It also appears that there is either no or a significantly small amount of unexplained variance in the data (assuming there are non-zero values that appear with more decimal places). This indicates that the predicted values for our data match the actual values to extreme precision.
+
+## CNC ELL TestSubject Plot
+
+Taking the CNC ELL TestSubject data, we will compare the proportion of proficient ELL students dependent on Charter enrollment and Test Subject concurrently. This will allow us to understand how student performances vary and if they are performing consistently across Test Subjects or if, on average, they are consistent.
+
+```{r CNC ELL TestSubject Plot}
+
+# creating a basic plot using the CNC_ell_subjects variable
+CNC_ell_subject_plot <- ggplot(CNC_ell_subjects, aes(x = Charter, y = ME_Percent, 
+                        fill = ME_Percent)) + geom_bar(stat = "identity", 
+                        position = "dodge", width = 0.7) + 
+  ggtitle('ELL Charter and Non Charter students vs Met or Exceeded') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 8) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Charter Status") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on the TestSubject column
+  facet_grid(~TestSubject, scales = "free", space = "free") 
+
+print(CNC_ell_subject_plot) 
+```
+
+On average, ELL performance is relatively consistent despite being tested in different subjects, that is to say, Non-Charter ELL students tested about the same and ELA and Math, and the same occurred for Charter ELL students. Numerically, the difference in the proportion of proficient students is about 0.13% for Non-Charter students, and 0.23% for Charter students.
+
+Interestingly, both Charter and Non-Charter ELL students performed worse in ELA compared to Math. IT is also important to note that the proportion of proficient ELL students in Charter Schools is still far below the National Average proportion of proficient students as indicated by the NAEP graph.
+
+## Analyzing the Dataset (CNC Non-ELL vs TestSubject)
+
+We will follow the same process above, but now we will consider the performances of Non-ELL students.
+
+```{r CNC Non-ELL TestSubject, warning=FALSE}
+
+# filtering to only consider Non-Charter Non-ELL students tested in Math 
+NC_nonell_math <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'Math', Charter == 'No') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)    
+
+# averaging counts and percentages for non-proficient and proficient students 
+NC_nonell_math <- NC_nonell_math %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+NC_nonell_math <- NC_nonell_math[ -c(2:10)] 
+
+# following the same process, with Non-Charter Non-ELL students tested in ELA
+NC_nonell_ela <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'ELA', Charter == 'No') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)    
+
+NC_nonell_ela <- NC_nonell_ela %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_nonell_ela <- NC_nonell_ela[ -c(2:10)] 
+
+# following the same process, with Charter Non-ELL students tested in ELA
+C_nonell_ela <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'ELA', Charter == 'Yes') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_nonell_ela <- C_nonell_ela %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+C_nonell_ela <- C_nonell_ela[ , -c(2:10)] 
+
+# following the same process, with Charter Non-ELL students tested in Math
+C_nonell_math <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', TestSubject == 'Math', Charter == 'Yes') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_nonell_math <- C_nonell_math %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_nonell_math <- C_nonell_math[ , -c(2:10)] 
+
+# row binding Charter and Non-Charter Non-ELL Math and ELA variables together
+CNC_nonell_subjects <- rbind(NC_nonell_ela, NC_nonell_math, C_nonell_ela, C_nonell_math) 
+
+# adding in the corresponding TestSubject values to the final variable
+CNC_nonell_subjects$TestSubject <- c("ELA", "Math", "ELA", "Math")
+CNC_nonell_subjects <- CNC_nonell_subjects %>% relocate(TestSubject, .after = Charter)
+CNC_nonell_subjects <- CNC_nonell_subjects[ -c(3:7) ]
+
+# row binding Charter and Non-Charter Non-ELL and ELL test subject variables together
+CNC_lep_subjects <- rbind(CNC_ell_subjects, CNC_nonell_subjects)
+
+# adding in corresponding values 'ELL' and 'Non-ELL' values to GroupName column
+CNC_lep_subjects$GroupName <- c("ELL", "ELL", "ELL", "ELL", "Not ELL", "Not ELL",
+                                "Not ELL", "Not ELL") 
+CNC_lep_subjects <- CNC_lep_subjects %>% relocate(GroupName, .after = TestSubject)
+print(CNC_lep_subjects) 
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+CNC_lep_subjects_comps <- aov(ME_Percent ~ Charter + TestSubject + GroupName, 
+                              data = CNC_lep_subjects)
+summary(CNC_lep_subjects_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of Charter, TestSubject, and 
+  # GroupName
+ind_CNC_lep_subjects_comps <- TukeyHSD(CNC_lep_subjects_comps)
+ind_CNC_lep_subjects_comps
+
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means, followed by the Charter column. Once again, the influence of the TestSubject column is not statistically significant.
+
+A small amount of unexplained variance in the data is present, however it does not hold more influence than our statistically significant columns.
+
+## CNC LEP TestSubject Plot
+
+Taking the CNC LEP TestSubject data, we will compare the proportion of proficient LEP students dependent on Charter enrollment and Test Subject concurrently. This will allow us to understand how student performances vary and if they are performing consistently across Test Subjects or if, on average, they are consistent for both ELL and Non-ELL students.
+
+```{r CNC LEP TestSubject Plot}
+
+# creating a basic plot using the CNC_lep_subjects variable
+CNC_lep_subject_plot <- ggplot(CNC_lep_subjects, aes(x = GroupName, y = ME_Percent, 
+                        fill = ME_Percent)) + geom_bar(stat = "identity", 
+                        position = "dodge", width = 0.7) + 
+  ggtitle('LEP Charter/Non Charter Test Subject vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 18) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "LEP Student") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10),
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on the Charter and TestSubject columns
+  facet_grid(Charter~TestSubject, scales = "free", space = "free") 
+print(CNC_lep_subject_plot)
+```
+
+Comparing the rate of change across Charter status, ELL students depicted an increase of about $8\%$ for both ELA and Math, and Non-ELL students showed an increase of about $13\%$ and $11\%$ for ELA and Math respectively. This indicates that numerically, Non-ELL students typically experience more growth when enrolled in a Charter School.
+
+To further illustrate this point we will compare the numeric values between ELL and Non-ELL students between subjects. Within Non-Charter schools, there was an $18.5\%$ difference between Non-ELL students and ELL students tested for ELA, and a $12\%$ difference for Mathematics. For Charter schools, there was a $23\%$ difference between ELL and Non-ELL students tested for ELA and a $15\%$ difference for Mathematics. Calculating the overall change in growth across Non-Charter and Charter schools, the difference between Non-ELL and ELL students grew by approximately $5.5\%$ (ELA) and $3\%$ (Math).
+
+## Analyzing the Dataset (CNC ELL DOT)
+
+As the performances of ELL students in the PPSD varied throughout our $4$ years of data as investigated in the "Working with the Providence Dataset" section, we must investigate how the performances of Charter School students changed. By doing so, we can determine if there was a significant difference in Covid recovery ($2022-2023$) between Charter and Non-Charter schools
+
+```{r CNC ELL DOT}
+
+# filtering to only consider Non-Charter ELL students tested in 2018
+NC_ell_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students
+NC_ell_2018 <- NC_ell_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+NC_ell_2018 <- NC_ell_2018[ , -c(2:10)]
+
+# adding in the Year column with value of '2018'
+NC_ell_2018$Year <- '2018' 
+NC_ell_2018 <- NC_ell_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in 2019
+NC_ell_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_2019 <- NC_ell_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_2019 <- NC_ell_2019[ , -c(2:10)]  
+
+NC_ell_2019$Year <- '2019' 
+NC_ell_2019 <- NC_ell_2019 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in 2022
+NC_ell_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_2022 <- NC_ell_2022 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_2022 <- NC_ell_2022[ , -c(2:10)]  
+
+NC_ell_2022$Year <- '2022' 
+NC_ell_2022 <- NC_ell_2022 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in 2023
+NC_ell_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_2023 <- NC_ell_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_2023 <- NC_ell_2023[ , -c(2:10)]  
+
+NC_ell_2023$Year <- '2023' 
+NC_ell_2023 <- NC_ell_2023 %>% relocate(Year, .after = Charter)
+
+# creating Non-Charter ELL DOT
+NC_ell_years <- rbind(NC_ell_2018, NC_ell_2019, NC_ell_2022, NC_ell_2023)
+print(NC_ell_years)
+
+# following the same process, with Charter ELL students tested in 2018
+C_ell_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_2018 <- C_ell_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_2018 <- C_ell_2018[ , -c(2:10)]  
+
+C_ell_2018$Year <- '2018' 
+C_ell_2018 <- C_ell_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in 2019
+C_ell_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_2019 <- C_ell_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_2019 <- C_ell_2019[ , -c(2:10)]  
+
+C_ell_2019$Year <- '2019' 
+C_ell_2019 <- C_ell_2019 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in 2022
+C_ell_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+C_ell_2022 <- C_ell_2022 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_2022 <- C_ell_2022[ , -c(2:10)]
+
+C_ell_2022$Year <- '2022' 
+C_ell_2022 <- C_ell_2022 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in 2023
+C_ell_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_2023 <- C_ell_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_2023 <- C_ell_2023[ , -c(2:10)] 
+
+C_ell_2023$Year <- '2023' 
+C_ell_2023 <- C_ell_2023 %>% relocate(Year, .after = Charter)
+
+# creating Charter ELL DOT
+C_ell_years <- rbind(C_ell_2018, C_ell_2019, C_ell_2022, C_ell_2023)
+print(C_ell_years)
+
+# creating CNC ELL DOT
+CNC_ell_dot <- rbind(C_ell_years, NC_ell_years)
+print(CNC_ell_dot)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+CNC_ell_dot_comps <- aov(ME_Percent ~ Year + Charter, data = CNC_ell_dot)
+summary(CNC_ell_dot_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of Charter and Year 
+ind_CNC_ell_dot_comps <- TukeyHSD(CNC_ell_dot_comps)
+ind_CNC_ell_dot_comps
+```
+
+From the statistical tests above, we can determine that the Charter column has the greatest influence over the variance of sample means, whereas the Year column is not statistically significant. Some unexplained variance is present as indicated by the Residuals column.
+
+## CNC ELL DOT Plot
+
+Taking the CNC ELL DOT data, we will compare the proportion of proficient ELL students dependent on Charter enrollment and Year concurrently. This will allow us to understand how student performances vary and if they are performing consistently Pre and Post Covid or if the achievement gap widens between the two ranges of time.
+
+```{r CNC ELL DOT Plot}
+
+# creating a basic plot using the CNC_ell_dot variable
+CNC_ell_dot_plot <- ggplot(CNC_ell_dot, aes(x = Charter, y = ME_Percent, 
+                    fill = ME_Percent)) + geom_bar(stat = "identity", 
+                    position = "dodge", width = 0.7) + 
+  ggtitle('ELL students Over Time vs Met or Exceeded') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 10) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Charter Status") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on the Year column
+  facet_grid(~Year)
+print(CNC_ell_dot_plot)  
+```
+
+Similar to ELL performances in Non-Charter Schools, ELL performances in Charter Schools experienced a large drop between $2019$ and $2022$. After Covid, ELL students in Charter Schools were able to recover quite well, an increase of $3.5\%$, whereas ELL students in Non-Charter Schools increased by $1.5\%$. This indicates that the recovery of Charter Schools Post-Covid is much stronger than that of Non-Charter Schools, at least in the case of ELL students.
+
+## Analyzing the Dataset (CNC Non-ELL DOT)
+
+We will follow the same process above, but now we will consider the performances of Non-ELL students.
+
+```{r CNC Non-ELL DOT}
+
+# filtering to consider Non-Charter Non-ELL students tested in 2023
+NC_nonell_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'No', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students 
+NC_nonell_2018 <- NC_nonell_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+NC_nonell_2018 <- NC_nonell_2018[ , -c(2:10)]  
+
+# adding in the Year column with value of '2018'
+NC_nonell_2018$Year <- '2018' 
+NC_nonell_2018 <- NC_nonell_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter Non-ELL students tested in 2019
+NC_nonell_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'No', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_nonell_2019 <- NC_nonell_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_nonell_2019 <- NC_nonell_2019[ , -c(2:10)] 
+
+NC_nonell_2019$Year <- '2019' 
+NC_nonell_2019 <- NC_nonell_2019 %>% relocate(Year, .after = Charter)
+
+# follwing the same process, with Non-Charter Non-ELL students tested in 2022
+NC_nonell_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'No', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_nonell_2022 <- NC_nonell_2022 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_nonell_2022 <- NC_nonell_2022[ , -c(2:10)]  
+
+NC_nonell_2022$Year <- '2022' 
+NC_nonell_2022 <- NC_nonell_2022 %>% relocate(Year, .after = Charter)
+
+# follwing the same process, with Non-Charter Non-ELL students tested in 2023
+NC_nonell_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'No', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_nonell_2023 <- NC_nonell_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_nonell_2023 <- NC_nonell_2023[ , -c(2:10)]  
+
+NC_nonell_2023$Year <- '2023' 
+NC_nonell_2023 <- NC_nonell_2023 %>% relocate(Year, .after = Charter)
+
+# creating Non-Charter Non-ELL DOT
+NC_nonell_years <- rbind(NC_nonell_2018, NC_nonell_2019, 
+                         NC_nonell_2022, NC_nonell_2023)
+print(NC_nonell_years) 
+
+# follwing the same process, with Charter Non-ELL students tested in 2018
+C_nonell_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'Yes', Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_nonell_2018 <- C_nonell_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_nonell_2018 <- C_nonell_2018[ , -c(2:10)]  
+
+C_nonell_2018$Year <- '2018' 
+C_nonell_2018 <- C_nonell_2018 %>% relocate(Year, .after = Charter)
+
+# follwing the same process, with Charter Non-ELL students tested in 2019 
+C_nonell_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'Yes', Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_nonell_2019 <- C_nonell_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_nonell_2019 <- C_nonell_2019[ , -c(2:10)]  
+
+C_nonell_2019$Year <- '2019' 
+C_nonell_2019 <- C_nonell_2019 %>% relocate(Year, .after = Charter)
+
+# follwing the same process, with Charter Non-ELL students tested in 2022
+C_nonell_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'Yes', Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_nonell_2022 <- C_nonell_2022 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_nonell_2022 <- C_nonell_2022[ , -c(2:10)] 
+
+C_nonell_2022$Year <- '2022' 
+C_nonell_2022 <- C_nonell_2022 %>% relocate(Year, .after = Charter)
+
+# follwing the same process, with Charter Non-ELL students tested in 2023 
+C_nonell_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'Not ELL', Charter == 'Yes', Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_nonell_2023 <- C_nonell_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_nonell_2023 <- C_nonell_2023[ , -c(2:10)]  
+
+C_nonell_2023$Year <- '2023' 
+C_nonell_2023 <- C_nonell_2023 %>% relocate(Year, .after = Charter)
+
+# creating Charter Non-ELL DOT
+C_nonell_years <- rbind(C_nonell_2018, C_nonell_2019, 
+                        C_nonell_2022, C_nonell_2023)
+print(C_nonell_years)
+
+# creating CNC Non-ELL Dot
+CNC_nonell_dot <- rbind(C_nonell_years, NC_nonell_years)
+print(CNC_nonell_dot)
+
+```
+
+## Analyzing the Dataset (CNC LEP DOT)
+
+With our CNC ELL and Non-ELL DOT variables created, we can now combine them and conduct our statistical tests to determine columns with the most influence of variance as well as their statistical significance.
+
+```{r CNC LEP DOT}
+
+# adding GroupName column with value of 'Not ELL' to the CNC_nonell_dot variable
+CNC_nonell_dot$GroupName <- "Not ELL" 
+CNC_nonell_dot <- CNC_nonell_dot %>% relocate(GroupName, .after = Charter)
+
+# adding GroupName column with value of 'ELL' to the CNC_ell_dot variable
+CNC_ell_dot$GroupName <- "ELL" 
+CNC_ell_dot <- CNC_ell_dot %>% relocate(GroupName, .after = Charter)
+
+# row binding the CNC LEP DOT
+CNC_lep_dot <- rbind(CNC_ell_dot, CNC_nonell_dot)
+print(CNC_ell_dot)
+print(CNC_nonell_dot)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+CNC_lep_dot_comps <- aov(ME_Percent ~ Year + GroupName + Charter, data = CNC_lep_dot)
+summary(CNC_lep_dot_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of Charter, GroupName, and Year 
+ind_CNC_lep_dot_comps <- TukeyHSD(CNC_lep_dot_comps)
+ind_CNC_lep_dot_comps
+```
+
+From the statistical tests above, we can determine that the GroupName column has the greatest influence over the variance of sample means, followed by the Charter column. The influence of the Year column is not statistically significant.
+
+A small amount of unexplained variance in the data is present, however it does not hold more influence than our statistically significant columns.
+
+## CNC LEP DOT Plot
+
+Taking the CNC LEP DOT data, we will compare the proportion of proficient ELL and Non-ELL students dependent on Charter enrollment and Year concurrently. This will allow us to understand how student performances vary and if they are performing consistently Pre and Post Covid or if the achievement gap widens between the two ranges of time.
+
+```{r CNC LEP DOT Plot}
+
+# creating a basic plot using the CNC_lep_dot variable
+CNC_lep_dot_plot <- ggplot(CNC_lep_dot, aes(x = Year, y = ME_Percent, 
+                    fill = ME_Percent)) + geom_bar(stat = "identity", 
+                    position = "dodge", width = 0.7) + 
+  ggtitle('CNC LEP Students Over Time vs Met or Exceeded') + 
+
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 20) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name = "Year", limits = c("2018", "2019", "2022", "2023")) + 
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,5),
+                     limits=c(0, 100)) +
+  coord_cartesian(ylim = c(3,100)) + 
+  
+  # creates a grid format, separates based on the Charter and GroupName columns
+  facet_grid(Charter~GroupName)
+
+print(CNC_lep_dot_plot)  
+```
+
+Both ELL and Non-ELL students experienced significant drops due to Covid, however their recovery rates ($2022-2023$ school year) greatly differed. For ELL students, Charter and Non-Charter performance grew by $3.5\%$ and $1.5\%$ respectively, whereas for Non-ELL students, Charter and Non-Charter performance grew by $2\%$ and $2.5\%$ respectively.
+
+Charter ELL students were more likely to recover to Post-Covid compared to Non-Charter ELL students. Conversely, Non-Charter Non-ELL students were more likely to recover to Post-Covid compared to Charter Non-ELL students. Due to this variation, it is difficult to determine whether Charter or Non-Charter Schools were more successful in returning to in-person instruction.
+
+## Analyzing the Dataset (CNC ELL TestSubject DOT)
+
+As we have done for our other analyses, we will not consider the effect that the TestSubject column had on performance, whether discrepancies arise or if performances remained consistent.
+
+```{r CNC ELL TestSubject DOT}
+
+# filtering to consider Non-Charter ELL students tested in Math in 2018
+NC_ell_math_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2018', TestSubject == 'Math') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students 
+NC_ell_math_2018 <- NC_ell_math_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+NC_ell_math_2018 <- NC_ell_math_2018[ , -c(2:10)]  
+
+# adding in the Year column with value of '2018'
+NC_ell_math_2018$Year <- '2018' 
+NC_ell_math_2018 <- NC_ell_math_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in Math in 2019
+NC_ell_math_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2019', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_math_2019 <- NC_ell_math_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_math_2019 <- NC_ell_math_2019[ , -c(2:10)]  
+
+NC_ell_math_2019$Year <- '2019' 
+NC_ell_math_2019 <- NC_ell_math_2019 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in Math in 2022
+NC_ell_math_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2022', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_math_2022 <- NC_ell_math_2022 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_math_2022 <- NC_ell_math_2022[ , -c(2:10)]  
+
+NC_ell_math_2022$Year <- '2022' 
+NC_ell_math_2022 <- NC_ell_math_2022 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in Math in 2023
+NC_ell_math_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2023', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_math_2023 <- NC_ell_math_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_math_2023 <- NC_ell_math_2023[ , -c(2:10)] 
+
+NC_ell_math_2023$Year <- '2023' 
+NC_ell_math_2023 <- NC_ell_math_2023 %>% relocate(Year, .after = Charter)
+
+# creating the Non-Charter ELL Math DOT variable
+NC_ell_math_dot <- rbind(NC_ell_math_2018, NC_ell_math_2019, 
+                         NC_ell_math_2022, NC_ell_math_2023)
+
+# following the same process, with Non-Charter ELL students tested in ELA in 2018
+NC_ell_ela_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2018', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_ela_2018 <- NC_ell_ela_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_ela_2018 <- NC_ell_ela_2018[ , -c(2:10)]  
+
+NC_ell_ela_2018$Year <- '2018' 
+NC_ell_ela_2018 <- NC_ell_ela_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in ELA in 2019
+NC_ell_ela_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2019', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_ela_2019 <- NC_ell_ela_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_ela_2019 <- NC_ell_ela_2019[ , -c(2:10)]
+
+NC_ell_ela_2019$Year <- '2019' 
+NC_ell_ela_2019 <- NC_ell_ela_2019 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in ELA in 2022
+NC_ell_ela_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2022', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_ela_2022 <- NC_ell_ela_2022 %>%
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_ela_2022 <- NC_ell_ela_2022[ , -c(2:10)]  
+
+NC_ell_ela_2022$Year <- '2022' 
+NC_ell_ela_2022 <- NC_ell_ela_2022 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Non-Charter ELL students tested in ELA in 2023
+NC_ell_ela_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'No', Year == '2023', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+NC_ell_ela_2023 <- NC_ell_ela_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+NC_ell_ela_2023 <- NC_ell_ela_2023[ , -c(2:10)] 
+
+NC_ell_ela_2023$Year <- '2023' 
+NC_ell_ela_2023 <- NC_ell_ela_2023 %>% relocate(Year, .after = Charter)
+
+# creating the Non-Charter ELL ELA DOT variable
+NC_ell_ela_dot <- rbind(NC_ell_ela_2018, NC_ell_ela_2019, 
+                        NC_ell_ela_2022, NC_ell_ela_2023)
+
+# creating the Non-Charter ELL Test Subject DOT variable
+NC_ell_subject_dot <- rbind(NC_ell_math_dot, NC_ell_ela_dot) 
+
+# adding in the TestSubject column with respective subject values
+NC_ell_subject_dot$TestSubject <- c(rep("Math", 4), rep("ELA", 4))
+NC_ell_subject_dot <- NC_ell_subject_dot %>% relocate(TestSubject, .after = Charter)
+print(NC_ell_subject_dot)
+
+# following the same process, with Charter ELL students tested in Math in 2018
+C_ell_math_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2018', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_math_2018 <- C_ell_math_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_math_2018 <- C_ell_math_2018[ , -c(2:10)]  
+
+C_ell_math_2018$Year <- '2018' 
+C_ell_math_2018 <- C_ell_math_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in Math in 2019
+C_ell_math_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2019', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_math_2019 <- C_ell_math_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_math_2019 <- C_ell_math_2019[ , -c(2:10)]  
+
+C_ell_math_2019$Year <- '2019' 
+C_ell_math_2019 <- C_ell_math_2019 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in Math in 2022
+C_ell_math_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2022', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_math_2022 <- C_ell_math_2022 %>%
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_math_2022 <- C_ell_math_2022[ , -c(2:10)]  
+
+C_ell_math_2022$Year <- '2022' 
+C_ell_math_2022 <- C_ell_math_2022 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in Math in 2023
+C_ell_math_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2023', TestSubject == 'Math') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_math_2023 <- C_ell_math_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_math_2023 <- C_ell_math_2023[ , -c(2:10)] 
+
+C_ell_math_2023$Year <- '2023' 
+C_ell_math_2023 <- C_ell_math_2023 %>% relocate(Year, .after = Charter)
+
+# creating the Charter ELL Math DOT variable
+C_ell_math_dot <- rbind(C_ell_math_2018, C_ell_math_2019, 
+                        C_ell_math_2022, C_ell_math_2023)
+
+# following the same process, with Charter ELL students tested in ELA in 2018
+C_ell_ela_2018 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2018', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_ela_2018 <- C_ell_ela_2018 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_ela_2018 <- C_ell_ela_2018[ , -c(2:10)]  
+
+C_ell_ela_2018$Year <- '2018' 
+C_ell_ela_2018 <- C_ell_ela_2018 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in ELA in 2019
+C_ell_ela_2019 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2019', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_ela_2019 <- C_ell_ela_2019 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_ela_2019 <- C_ell_ela_2019[ , -c(2:10)]  
+
+C_ell_ela_2019$Year <- '2019' 
+C_ell_ela_2019 <- C_ell_ela_2019 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in ELA in 2022
+C_ell_ela_2022 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2022', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_ela_2022 <- C_ell_ela_2022 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_ela_2022 <- C_ell_ela_2022[ , -c(2:10)]  
+
+C_ell_ela_2022$Year <- '2022' 
+C_ell_ela_2022 <- C_ell_ela_2022 %>% relocate(Year, .after = Charter)
+
+# following the same process, with Charter ELL students tested in ELA in 2023
+C_ell_ela_2023 <- finalized_data %>% group_by(Charter) %>% 
+  filter(GroupName == 'ELL', Charter == 'Yes', Year == '2023', TestSubject == 'ELA') %>%
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+C_ell_ela_2023 <- C_ell_ela_2023 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+C_ell_ela_2023 <- C_ell_ela_2023[ -c(2:10)] 
+
+C_ell_ela_2023$Year <- '2023' 
+C_ell_ela_2023 <- C_ell_ela_2023 %>% relocate(Year, .after = Charter)
+
+# creating the Charter ELL ELA DOT variable
+C_ell_ela_dot <- rbind(C_ell_ela_2018, C_ell_ela_2019, 
+                       C_ell_ela_2022, C_ell_ela_2023)
+
+# creating the Charter ELL Test Subject DOT variable
+C_ell_subject_dot <- rbind(C_ell_math_dot, C_ell_ela_dot)
+
+# adding in the TestSubject column with respective subject values
+C_ell_subject_dot$TestSubject <- c(rep("Math", 4), rep("ELA", 4)) 
+C_ell_subject_dot <- C_ell_subject_dot %>% relocate(TestSubject, .after = Charter)
+print(C_ell_subject_dot)
+
+# creating the CNC ELL Test Subject DOT variable
+CNC_ell_subject_dot <- rbind(C_ell_subject_dot, NC_ell_subject_dot)
+print(CNC_ell_subject_dot)
+```
+
+## CNC ELL TestSubject DOT Plot
+
+Taking the CNC ELL TestSubject DOT data, we will compare the proportion of proficient ELL students dependent on Charter enrollment, Year, and which Test Subject is studied. This will allow us to understand how student performances vary and if Charter students are equally struggling with the same subjects that Non-Charter students are having difficulties with.
+
+```{r CNC ELL TestSubject DOT Plot}
+
+# creating a basic plot using the CNC_ell_subject_dot variable
+CNC_ell_subject_dot_plot <- ggplot(CNC_ell_subject_dot, aes(x = Year, y = ME_Percent, 
+                            fill = ME_Percent)) + geom_bar(stat = "identity", 
+                            position = "dodge", width = 0.5) + 
+  ggtitle('CNC ELL students Over Time vs Met or Exceeded') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 10) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Charter Status") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on the TestSubject and Year columns
+  facet_grid(TestSubject~Charter)
+print(CNC_ell_subject_dot_plot)   
+```
+
+The rate at which Charter ELL students recovered was much higher than Non-Charter ELL students. These percentages are $3.5\%$ vs $1.5\%$ (ELA) and $4\%$ vs $2\%$ (Math) for Charter and Non-Charter students respectively. This indicates that students in Charter Schools were able to better adjust to in-person instruction Post-Covid.
+
+Interestingly enough, ELL students in general performed better in ELA Pre-Covid compared to Math. However, Post-Covid, ELL students began to perform better in Math compared to ELA. A possible explanation of this phenomenon comes from the primary language spoken in households during Covid. If ELL students were speaking in the native language of their parents (for example Spanish), then they would not be practicing English, and hence, be more likely to forget conventions, vocabulary, and grammatical rules.
+
+## ------------------------------------------------------------------------------------------------------
+
+# Rhode Island Data
+
+## ------------------------------------------------------------------------------------------------------
+
+## Analyzing the Dataset (RI DOT)
+
+To understand the efficacy of the Takeover, we will average the general data for all schools in Rhode Island divided by year, and then compare how it changed relative to the PPSD. By doing so, we can better understand how Rhode Island approached their recovery to returning to in-person instruction, and determine whether there was a substantial difference between the growth rates of Rhode Island (not influenced by the Takeover), and the PPSD (influenced by the Takeover).
+
+```{r RI DOT}
+
+# we include this step as our Year column is listed as an integer instead of a 
+  # factor, if we kept it as an integer, it would mess up how the graphs are 
+  # created
+ri_data$Year <- as.factor(ri_data$Year)  
+
+# filtering to consider RI students tested in 2018
+ri_18 <- ri_data %>% group_by(Year) %>% filter(Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students 
+ri_18 <- ri_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+ri_18 <- ri_18[ , -c(2:13) ] 
+
+# following the same process, with RI students tested in 2019
+ri_19 <- ri_data %>% group_by(Year) %>% filter(Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ri_19 <- ri_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ri_19 <- ri_19[ , -c(2:13)] 
+
+# following the same process, with RI students tested in 2022
+ri_22 <- ri_data %>% group_by(Year) %>% filter(Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ri_22 <- ri_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ri_22 <- ri_22[ , -c(2:13)] 
+
+# following the same process, with RI students tested in 2023
+ri_23 <- ri_data %>% group_by(Year) %>% filter(Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ri_23 <- ri_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ri_23 <- ri_23[ , -c(2:13)] 
+
+# creating the Rhode Island DOT variable
+ri_dot <- rbind(ri_18, ri_19, ri_22, ri_23)
+
+# adding in the Area column with a value of 'Rhode Island'
+ri_dot$Area <- 'Rhode Island' 
+ri_dot <- ri_dot %>% relocate(Area, .after = Year) 
+
+print(ri_dot)
+```
+
+## RI DOT Plot
+
+Taking the RI DOT data, we will compare the proportion of proficient students dependent on the Year studied. This will allow us to understand how student performances vary in the state as a whole, and later we will compare these performances with the PPSD alone.
+
+```{r RI DOT Plot}
+
+# creating a basic plot ri_dot variable
+ri_dot_plot <- ggplot(ri_dot, aes(x = Year, y = ME_Percent, fill = ME_Percent)) +
+               geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
+  ggtitle('Rhode Island Data Over Time vs Percent of Meet or Exceed') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 30) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Year") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) 
+print(ri_dot_plot)
+```
+
+As a whole, Rhode Island is performing quite well, close to the National Standard as identified by the NAEP. Rhode Island experienced a large drop between $2019$ and $2022$ ($4\%$ statewide). They also struggled to recover Post-Covid, as the growth rate between $2022$ and $2023$ was only $1\%$.
+
+## Analyzing the Dataset (PPSD DOT)
+
+We will follow the same process above, but now we will consider the performances of students enrolled in the PPSD alone.
+
+```{r PPSD DOT, warning=FALSE}
+
+# filtering to consider PPSD students tested in 2018
+ppsd_18 <- providence_data %>% filter(Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+# averaging counts and percentages for non-proficient and proficient students 
+ppsd_18 <- ppsd_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+ppsd_18 <- ppsd_18[ -c(1:3, 5:13) ]
+
+# following the same process, with PPSD students tested in 2019
+ppsd_19 <- providence_data %>% filter(Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ppsd_19 <- ppsd_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ppsd_19 <- ppsd_19[ -c(1:3, 5:13) ]
+
+# following the same process, with PPSD students tested in 2022
+ppsd_22 <- providence_data %>% filter(Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ppsd_22 <- ppsd_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ppsd_22 <- ppsd_22[ -c(1:3, 5:13) ]
+
+# following the same process, with PPSD students tested in 2023
+ppsd_23 <- providence_data %>% filter(Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE)
+
+ppsd_23 <- ppsd_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count),
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ppsd_23 <- ppsd_23[ -c(1:3, 5:13) ]
+
+# adding in the Area column with a value of 'PPSD'
+ppsd_dot <- rbind(ppsd_18, ppsd_19, ppsd_22, ppsd_23) 
+ppsd_dot$Area <- 'PPSD'
+ppsd_dot <- ppsd_dot %>% relocate(Area, .after = Year)
+print(ppsd_dot)
+
+# row binding the PPSD and RI DOT variables together
+ri_vs_ppsd <- rbind(ri_dot, ppsd_dot)
+print(ri_vs_ppsd)
+
+# in this statistical test, we will compare the influence of each column on the 
+  # variance of the data. Smaller values in the Pr(>F) column indicate higher 
+  # influence, the same can be said for higher values in the Mean Sq column
+ri_vs_ppsd_comps <- aov(ME_Percent ~ Year + Area, data = ri_vs_ppsd)
+summary(ri_vs_ppsd_comps)
+
+# this statistical test will compare the significance of the difference of sample 
+  # mean values. Here, we will compare the influence of Year and Area
+ind_ri_vs_ppsd_comps <- TukeyHSD(ri_vs_ppsd_comps)
+ind_ri_vs_ppsd_comps
+
+```
+
+## RI VS PPSD DOT Plot
+
+Taking the RI VS PPSD DOT data, we will compare the proportion of proficient students dependent on the Year and whether they were enrolled in the PPSD or the rest of Rhode Island. This will allow us to understand how student performances vary in the state as a whole, and how efficient the Takeover was in promoting student performance and recovery Post-Covid.
+
+```{r RI vs PPSD DOT Plot}
+
+# creating a basic plot ri_vs_ppsd variable
+ri_vs_ppsd_plot <- ggplot(ri_vs_ppsd, aes(x = Year, y = ME_Percent, fill = ME_Percent)) + 
+                   geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
+  ggtitle('PPSD and RI vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient 
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 22.5) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Year") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on the Area column
+  facet_grid(~Area, scales = "free", space = "free") 
+print(ri_vs_ppsd_plot)
+```
+
+The pattern of PPSD and Rhode Island performance matches quite perfectly. Between $2018$ and $2019$, both experienced a growth in student performance ($1.5\%$ vs $3.5\%$), between $2019$ and $2022$ student performance dropped ($2\%$ vs $4\%$) and between $2022$ and $2023$ student performance rose again ($2\%$ vs $1\%$).
+
+Based on the performance gain between $2022$ and $2023$, PPSD students recovered quicker than Rhode Island as a whole when returning to in-person instruction. However, the margin at which they grew is not significantly different (only $1\%$). Thus, while the Takeover did benefit students enrolled in the PPSD to some extent, it can be argued that it did not significantly impact student performance compared to the state as a whole.
+
+## Analyzing the Dataset (RI ELL DOT)
+
+Now that we have an understanding of how the PPSD and Rhode Island performances correspond and differ, we will now only consider ELL students in both groups.
+
+```{r RI ELL DOT}
+
+# filtering to consider RI ELL students being tested
+ri_ell <- ri_data %>% filter(GroupName == 'ELL')
+
+# filtering to consider RI ELL students tested in 2018
+ri_ell_18 <- ri_ell %>% group_by(Year) %>% filter(Year == '2018') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+# averaging counts and percentages for non-proficient and proficient students 
+ri_ell_18 <- ri_ell_18 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+ri_ell_18 <- ri_ell_18[ -c(2:13) ] 
+
+# following the same process, with RI ELL students tested in 2019
+ri_ell_19 <- ri_ell %>% group_by(Year) %>% filter(Year == '2019') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ri_ell_19 <- ri_ell_19 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100),
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ri_ell_19 <- ri_ell_19[ -c(2:13) ] 
+
+# following the same process, with RI ELL students tested in 2022
+ri_ell_22 <- ri_ell %>% group_by(Year) %>% filter(Year == '2022') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ri_ell_22 <- ri_ell_22 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count),
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ri_ell_22 <- ri_ell_22[ -c(2:13) ] 
+
+# following the same process, with RI ELL students tested in 2023
+ri_ell_23 <- ri_ell %>% group_by(Year) %>% filter(Year == '2023') %>% 
+  summarize_if(is.numeric, mean, na.rm = TRUE) 
+
+ri_ell_23 <- ri_ell_23 %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+ri_ell_23 <- ri_ell_23[ -c(2:13) ] 
+
+# creating the RI ELL DOT variable
+ri_ell_dot <- rbind(ri_ell_18, ri_ell_19, ri_ell_22, ri_ell_23)
+print(ri_ell_dot)
+```
+
+## RI ELL DOT Plot
+
+Taking the RI ELL DOT data, we will compare the proportion of proficient RI ELL students dependent on the Year. This will allow us to understand how student performances vary in the state as a whole, and how efficient the Takeover was in promoting specifically ELL student performance and recovery Post-Covid.
+
+```{r RI ELL DOT Plot}
+
+# creating a basic plot ri_ell_dot variable
+ri_ell_dot_plot <- ggplot(ri_ell_dot, aes(x = Year, y = ME_Percent, 
+                   fill = ME_Percent)) + geom_bar(stat = "identity", 
+                   position = "dodge", width = 0.7) + 
+  ggtitle('RI ELL Performance Over Time') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 9.5) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Year") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) 
+
+print(ri_ell_dot_plot)
+```
+
+Compared to the proportion of all proficient students in Rhode Island, there is a staggering difference in the proportion of proficient ELL students in Rhode Island. Rhode Island as a whole has an average proportion of proficient students around $35\%$, whereas the average for ELL students is around $9\%$. Between $2018$ and $2019$, performance grew by $0.2\%$, between $2019$ and $2022$, student performance dropped by $2.5\%$, and between $2022$ and $2023$ student performance grew by $1\%$.
+
+## Analyzing the Dataset (RI vs PPSD ELL DOT)
+
+Akin to our analysis of RI vs PPSD in general, we will now compare the Rhode Island ELL performances with the PPSD ELL performances. Here, we will need to adjust our ELL data that was created in the "Working with the Providence Dataset" Section to match the Rhode Island ELL data we created previously.
+
+```{r RI vs PPSD ELL DOT, warning = FALSE}
+
+# adding in Area column with value 'Rhode Island'
+ri_ell_dot$Area <- 'Rhode Island'
+
+# adding in GroupType column so the variables will match in column numbers
+ri_ell_dot$GroupName <- 'ELL'
+ri_ell_dot <- ri_ell_dot %>% relocate(Area, .before = Year) %>% 
+  relocate(GroupName, .after = Year)
+print(ri_ell_dot)
+
+# adding in Area column with value 'PPSD'
+all_ell$Area <- 'PPSD' 
+all_ell <- all_ell %>% relocate(Area, .before = Year)
+print(all_ell)
+
+# removing unnecessary columns
+all_ell <- all_ell[ -c(4:12) ] %>% relocate(Area, .before = Year) 
+
+# row binding the PPSD and RI ELL DOT variables together
+ell_ri_ppsd <- rbind(all_ell, ri_ell_dot)
+print(ell_ri_ppsd)
+
+# anova analysis, interpret results later and edit comments
+ell_ri_ppsd_comps <- aov(ME_Percent ~ Year + Area, data = ell_ri_ppsd)
+summary(ell_ri_ppsd_comps)
+
+ind_ell_ri_ppsd_comps <- TukeyHSD(ell_ri_ppsd_comps)
+
+# Display the Tukey HSD results
+ind_ell_ri_ppsd_comps
+
+```
+
+From the statistical tests above, we can determine that the Area column has the greatest influence over the variance of sample means, whereas the influence of the Year column is not statistically significant.
+
+Again, there is some unexplained variance as indicated by the Residuals column, however its influence is not greater than the statistically significant columns.
+
+## RI vs PPSD ELL DOT Plot
+
+Taking the RI vs PPSD ELL DOT data, we will compare the proportion of proficient RI and PPSD ELL students dependent on the Year. This will allow us to understand how student performances vary in the state as a whole, and how efficient the Takeover was in promoting specifically ELL student performance and recovery Post-Covid.
+
+```{r RI vs PPSD ELL DOT Plot}
+
+# creating a basic plot ell_ri_ppsd variable
+ell_ri_ppsd_plot <- ggplot(ell_ri_ppsd, aes(x = Year, y = ME_Percent, 
+                    fill = ME_Percent)) + geom_bar(stat = "identity",
+                    position = "dodge", width = 0.7) + 
+  ggtitle('RI vs PPSD ELL vs Met or Exceeded Rate') + 
+  
+  # this step adds the numerical labels above each bar in the graph
+  geom_text(aes(label=(round(ME_Percent, 3))), vjust = -1.5, 
+            position = position_dodge(0.75), size = 2.5) +
+  
+  # adds a black line on the x and y axes
+  theme(axis.line = element_line(color = 'black', linetype = 'solid'), 
+        axis.text.x = element_text(angle = 0)) + 
+  
+  # adds the color gradient
+    # based on the values of each bar, a color on the gradient is selected
+  scale_fill_gradient2(low = "black", mid = "#e31a1c", high = "#fd8d3c", midpoint = 9.5) +
+  
+  # adds the titles for the x and y axes, adjusts the bounds of the y axis
+  # using scale_x_discrete since the axis values are alphabetic 
+  # using scale_y_continuous since the axis values are numeric
+  scale_x_discrete(name= "Year") +
+  scale_y_continuous(name="Percent of Met or Exceeded", breaks = seq(0,100,10), 
+                     limits=c(0, 95)) +
+  coord_cartesian(ylim = c(5,100)) + 
+  
+  # creates a grid format, separates based on the Area column
+  facet_grid(~Area, scales = "free", space = "free") 
+print(ell_ri_ppsd_plot)
+```
+
+Once again, there is a large difference in the proportion of proficient students in the PPSD compared to Rhode Island as a whole. The proportion of proficient ELL students in the PPSD dropped between $2018$ and $2022$, however in Rhode Island, this proportion grew between $2018$ and $2019$ before falling between $2019$ and $2022$. The largest gap in performance between RI ELL and PPSD ELL occurs in $2019$ ($6\%$).
+
+In terms of recovering to Covid, both RI ELL and PPSD ELL grew by approximately the same rate ($1\%$), indicating that ELL students did not benefit from them Takeover, at least when compared to Rhode Island as a a state.
+
+## ------------------------------------------------------------------------------------------------------
+
+# February 2nd School Choice Information
+
+## ------------------------------------------------------------------------------------------------------
+
+## School Choice Including Charters
+
+Here, we will be considering both Charter and Non-Charter schools, to provide the best options for families that plan to enroll in either Charter or Non-Charter schools.
+
+```{r School Choice Including Charters, warning=FALSE}
+
+# filtering the finalized_data variable to only consider ELL performance in 2023 
+# we are only considering performance in 2023 as it is the most indicative of which school 
+  # is performing the best and is likely to have higher performance in the following years
+ell_final_data <- finalized_data %>% filter(GroupName == 'ELL', Year == '2023')
+
+# calculating overall counts and percentages, we are grouping based on School Name 
+  # in order to get the applicable averages for each school rather than as a whole
+ell_final_sch_data <- ell_final_data %>% group_by(SchName)
+ell_final_sch_data <- ell_final_sch_data %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+ell_final_sch_data <- ell_final_sch_data[ -c(1:7, 10:23)]
+print(ell_final_sch_data)
+
+# calculating the average percentage of students who met or exceeded proficiency in
+  # 2023 this considers general proficiency, so we average out performances in Math, 
+  # ELA, and Science
+avg_prov_scores <- ell_final_sch_data %>% group_by(SchName) %>%
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE))
+
+# getting rid of NA values
+avg_prov_scores[is.na(avg_prov_scores)] <- 0
+
+# arranging the order of School Names based on their corresponding Average_ME_Percent 
+  # this will allow us to easily see which schools are performing better than others
+avg_prov_scores<- avg_prov_scores %>%
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%
+  arrange(desc(Average_ME_Percent))
+
+print(avg_prov_scores)
+
+# filtering only ELL students tested in ELA and calculating the highest scores based 
+  # on school averages
+avg_prov_ela_scores <- ell_final_data %>%
+  filter(TestSubject == "ELA") %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100)) %>% 
+  arrange(desc(ME_Percent))
+
+avg_prov_ela_scores <- avg_prov_ela_scores[-c(1:6, 10:23)]
+print(avg_prov_ela_scores)
+
+# following the same process, for ELL students tested in Math
+avg_prov_math_scores <- ell_final_data %>%
+  filter(TestSubject == "Math") %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100)) %>% 
+  arrange(desc(ME_Percent))
+
+avg_prov_math_scores <- avg_prov_math_scores[-c(1:6, 10:23)]
+print(avg_prov_math_scores)
+
+```
+
+## School Choice Excluding Charters
+
+Here, we will be considering only Non-Charter, to provide the best options for families that either did not plan to enroll in Charter Schools, or who attempted to enroll and were denied admission.
+
+```{r School Choice Excluding Charters, warning=FALSE}
+
+# filtering the providence_data variable (No Charters) to only consider ELL students 
+  # tested in 2023 to gauge which schools will be better for students enrolling in 
+  # subsequent school years
+ell_prov_data <- providence_data %>% filter(GroupName == 'ELL', Year == '2023') 
+
+# calculating overall counts and percentages, we are grouping based on School Name 
+  # in order to get the applicable averages for each school rather than as a whole
+ell_prov_sch_data <- ell_prov_data %>% group_by(SchName)
+ell_prov_sch_data <- ell_prov_sch_data %>% 
+  mutate(ME_Count = (Level_3_Count + Level_4_Count), 
+         NonME_Count = (Level_1_Count + Level_2_Count), 
+         ME_Percent = (ME_Count / Total_Count * 100), 
+         NonME_Percent = (NonME_Count / Total_Count * 100))
+
+# removing unnecessary columns
+ell_prov_sch_data <- ell_prov_sch_data[ -c(1:6, 9, 11, 14:22)]
+
+# filtering to consider ELL Elementary students tested in Math
+ell_ele_math <- ell_prov_sch_data %>% filter(SchType == "Elementary School", 
+                                      TestSubject == "Math")
+
+# finding the average proportion of students who meet and exceed proficiency
+avg_ell_ele_math <- ell_ele_math %>% group_by(SchName) %>% 
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE))
+
+# arranging the listing of schools based on highest average values first
+avg_ell_ele_math <- avg_ell_ele_math %>% 
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%  
+  arrange(desc(Average_ME_Percent))
+
+print(avg_ell_ele_math)
+
+# following the same process, for ELL Middle School students tested in Math
+ell_mid_math <- ell_prov_sch_data %>% filter(SchType == "Middle School", 
+                                      TestSubject == "Math")
+
+avg_ell_mid_math <- ell_mid_math %>% group_by(SchName) %>%
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE))
+
+avg_ell_mid_math <- avg_ell_mid_math %>% 
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%  
+  arrange(desc(Average_ME_Percent))
+
+print(avg_ell_mid_math)
+
+# following the same process, for ELL High School students tested in Math
+ell_high_math <- ell_prov_sch_data %>% filter(SchType == "High School",
+                                       TestSubject == "Math")
+
+avg_ell_high_math <- ell_high_math %>% group_by(SchName) %>% 
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE)) %>% 
+  mutate(SchName = as_factor(SchName))
+
+avg_ell_high_math <- avg_ell_high_math %>% 
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%
+  mutate(SchName = as_factor(SchName)) %>%
+  arrange(desc(Average_ME_Percent))
+
+avg_ell_high_math[is.na(avg_ell_high_math)] <- 0
+
+print(avg_ell_high_math)
+
+# following the same process, for ELL Elementary School students tested in ELA
+ell_ele_ela <- ell_prov_sch_data %>% filter(SchType == "Elementary School", 
+                                     TestSubject == "ELA")
+
+avg_ell_ele_ela <- ell_ele_ela %>% group_by(SchName) %>% 
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE))
+
+avg_ell_ele_ela <- avg_ell_ele_ela %>% 
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%  
+  arrange(desc(Average_ME_Percent))
+
+print(avg_ell_ele_ela)
+
+# following the same process, for ELL Middle School students tested in ELA
+ell_mid_ela <- ell_prov_sch_data %>% filter(SchType == "Middle School", 
+                                     TestSubject == "ELA")
+
+avg_ell_mid_ela <- ell_mid_ela %>% group_by(SchName) %>% 
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE))
+
+avg_ell_mid_ela <- avg_ell_mid_ela %>% 
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%  
+  arrange(desc(Average_ME_Percent))
+
+print(avg_ell_mid_ela)
+
+# following the same process, for ELL High School students tested in ELA
+ell_high_ela <- ell_prov_sch_data %>% filter(SchType == "High School", 
+                                      TestSubject == "ELA")
+
+avg_ell_high_ela <- ell_high_ela %>% group_by(SchName) %>% 
+  summarize(Average_ME_Percent = mean(ME_Percent, na.rm = TRUE)) 
+
+avg_ell_high_math <- avg_ell_high_math %>% 
+  mutate(SchName = fct_reorder(SchName, Average_ME_Percent)) %>%
+  mutate(SchName = as_factor(SchName)) %>%
+  arrange(desc(Average_ME_Percent))
+
+avg_ell_high_math[is.na(avg_ell_high_math)] <- 0
+
+print(avg_ell_high_ela)
+```

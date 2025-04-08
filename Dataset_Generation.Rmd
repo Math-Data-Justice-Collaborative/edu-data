@@ -1,0 +1,1210 @@
+---
+title: "test"
+output:
+  pdf_document: default
+  html_document: default
+date: "2025-03-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ------------------------------------------------------------------------------------------------------
+
+# Dataset Generation Process
+
+## ------------------------------------------------------------------------------------------------------
+
+## Libraries and Packages
+
+Here we will provide all of the libraries and packages that are utilized in our R files. If you **do not** the packages downloaded, you can remove the comment, highlight the line(s), and press 'command' + 'return' to run only the highlighted lines. This way, you do not need to re-load any of the libraries.
+
+```{r}
+
+# use 'install.packages()' if you do not already have the packages downloaded
+# install.packages("readxl")
+# install.packages("tidyr") 
+# install.packages("dplyr")   
+# install.packages("ggplot2") 
+# install.packages("tidyverse") 
+# install.packages("tibble")
+# install.packages("RColorBrewer") 
+# install.packages("stringr") 
+# install.packages("forcats")
+# tinytex::install_tinytex()
+
+# library('package name') is to load in the packages that will be used throughout the file
+library(readxl) 
+library(tidyr)
+library(dplyr) 
+library(ggplot2)
+library(RColorBrewer)
+library(stringr)
+library(forcats)
+```
+
+## ------------------------------------------------------------------------------------------------------
+
+# Creating the Providence Dataset
+
+## ------------------------------------------------------------------------------------------------------
+
+First, we will look at the data associated with the Providence Public School District (PPSD). These excel files were taken from the Rhode Island Department of Education (RIDE) Report Card repository, which is accessible at: <https://reportcard.ride.ri.gov/>. Navigate to the button that reads 'Custom View/Download Data' and select 'Go!'. Under 'Select level of data' we will choose 'District Level', then we can download our respective school year data by clicking the download icon on the 'Assessments' block. For this study, we will be using data from the school years 2017-2018, 2018-2019, 2021-2022, and 2022-2023. The years 2019-2020 and 2020-2021 are not included as testing was not conducted during those years.
+
+**\*\*** **Note:** The results for the 2023-2024 School Year were recently added to the report card database, however they are not included.
+
+## Excel File Downloaded Names
+
+This allows us to read in each individual data excel file, and only select the sheet of numerical information that we would like. We use the extra step of 'skip' for the my_data4 variable since the first thousand entries are empty rows of data. If we were to skip this step, then it would cause the entirety of the excel file to be read in as empty.
+
+**\*\* Note:** In order to use the 'read_excel' function, make sure to input the **absolute path** **of the excel file**, meaning you include the root '\~' and use '/' to depict folders. For example, these files can be found by navigating to the Desktop, selecting the 'Thesis' folder, then selecting the 'R tests' folder within the 'Thesis' folder.
+
+```{r messages = FALSE}
+my_data1 <- read_excel("~/Desktop/Thesis/R tests/Assessments_201718.xlsx", sheet = 4) 
+my_data2 <- read_excel("~/Desktop/Thesis/R tests/Assessments_201819.xlsx", sheet = 1) 
+my_data3 <- read_excel("~/Desktop/Thesis/R tests/Assessments_202122.xlsx", sheet = 4) 
+my_data4 <- read_excel("~/Desktop/Thesis/R tests/Assessments_202223.xlsx", sheet = 2, 
+                       skip = 4665)
+```
+
+## Excel File for the 2017-2018 School Year
+
+The code below is the process used to filter and clean the Rhode Island Department of Education (RIDE) Report Card data for the 2017-2018 school year. We need to filter the data to only include districts and schools within the Providence Area. For now, we will only be looking at District 28, which is the Providence Public School District (PPSD). Later, we will compare the PPSD to the charter schools and surrounding Rhode Island schools that are present within this data.
+
+**\*\* Note:** You will not need to run this code or any of the code regarding the year specific Excel Files, as a final version with all of the relevant information from each file will be provided.
+
+```{r}
+
+# filtering to only look at Providence District, getting rid of the 3rd column
+my_data1 <- my_data1[ -c(3) ]
+
+# renaming all of the columns in the tibble
+# we will use this exact code to make sure all of the column names for 
+  # each excel file match
+colnames(my_data1) <- c('DistCode', 'SchCode','GroupType', 'GroupName', 'TestSubject', 
+                        'Level_1_Count', 'Level_2_Count', 'Level_3_Count', 
+                        'Level_4_Count', 'Total_Count', 'Level_1_Percentage', 
+                        'Level_2_Percentage', 'Level_3_Percentage', 'Level_4_Percentage')
+
+providence_data18 <- dplyr::filter(my_data1, DistCode == 28)  
+
+# creating a vector that contains all of the school names for each corresponding 
+  # school code
+# grepl looks for any instance of the numerical pattern in the variable, we will use
+  # this to manually assign school names based off of their school code
+sch_name18 <-c() 
+for (i in providence_data18$SchCode){
+  if (grepl("28103", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Leviton Dual Language School")
+  }
+  else if (grepl("28113", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Dr. Jorge Alvarez High School")
+  }
+  else if (grepl("28115", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Asa Messer Elementary School")
+  }
+  else if (grepl("28116", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Alan Shawn Feinstein Elementary at Broad Street")
+  }
+  else if (grepl("28121", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Alfred Lima Sr. Elementary School")
+  }
+  else if (grepl("28127", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Webster Avenue School")
+  }
+  else if (grepl("28130", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Veazie Street School")
+  }
+  else if (grepl("28134", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Frank D. Spaziano Elementary School")
+  }
+  else if (grepl("28135", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "George J. West Elementary School")
+  }
+  else if (grepl("28137", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Esek Hopkins Middle School")
+  }
+  else if (grepl("28138", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Robert F. Kennedy Elementary School")
+  }
+  else if (grepl("28139", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Central High School")
+  }
+  else if (grepl("28140", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Carl G. Lauro Elementary School")
+  }
+  else if (grepl("28142", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Reservoir Avenue School")
+  }
+  else if (grepl("28143", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Nathan Bishop Middle School")
+  }
+  else if (grepl("28144", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Gilbert Stuart Middle School")
+  }
+  else if (grepl("28145", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Nathanael Greene Middle School")
+  }
+  else if (grepl("28147", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Roger Williams Middle School")
+  }
+  else if (grepl("28149", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Hope High School")
+  }
+  else if (grepl("28150", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Mount Pleasant High School")
+  }
+  else if (grepl("28151", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Vartan Gregorian Elementary School")
+  }
+  else if (grepl("28153", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "William D'Abate Elementary School")
+  }
+  else if (grepl("28156", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Robert L Bailey IV Elementary School")
+  }
+  else if (grepl("28157", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Lillian Feinstein Elementary Sackett Street")
+  }
+  else if (grepl("28160", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Mary E. Fogarty Elementary School")
+  }
+  else if (grepl("28161", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Harry Kizirian Elementary School")
+  }
+  else if (grepl("28162", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "The Sgt. Cornel Young Jr & Charlotte Woods Elementary School @ The B. Jae Clanton Complex")
+  }
+  else if (grepl("28163", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Dr. Martin Luther King, Jr. Elementary School")
+  }
+  else if (grepl("28164", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Classical High School")
+  }
+  else if (grepl("28165", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Pleasant View School")
+  }
+  else if (grepl("28170", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Times2 Academy")
+  }
+  else if (grepl("28178", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Academy for Career Exploration (ACES)")
+  }
+  else if (grepl("28181", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Anthony Carnevale Elementary School")
+  }
+  else if (grepl("28182", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Governor Christopher DelSesto Middle School")
+  }
+  else if (grepl("28187", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "E-Cubed Academy")
+  }
+  else if (grepl("28189", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "William B. Cooley, Sr. High School and the Providence Academy of International Studies High School")
+  }
+  else if (grepl("28193", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Providence Career and Technical Academy")
+  }
+  else if (grepl("28194", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "West Broadway Middle School")
+  }
+  else if (grepl("28195", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "360 High School")
+  }
+  else if (grepl("28196", i, ignore.case = TRUE)){ 
+    sch_name18 <- c(sch_name18, "Evolutions High School")
+  }
+  else sch_name18 <- c(sch_name18, "None")
+} 
+
+# adding the school name vector to the tibble under the column name 'SchName'
+providence_data18$SchName <- sch_name18
+
+# creating a vector that contains all of the school types for each corresponding school
+# this time, 'grepl' will look for school types, ignore.case will be used in case any of 
+  # the school types have changes in uppercase and/or lowercase
+
+# for the data of these schools, every school labelled as an 'Academy' served Elementary 
+  # School, however this may not be the case in other districts
+sch_type18 <- c()
+for (i in providence_data18$SchName){ 
+  if (grepl("Elementary", i, ignore.case = TRUE)){ 
+    sch_type18 <- c(sch_type18, "Elementary School")
+  } 
+  else if (grepl("Middle/High", i, ignore.case = TRUE)){
+    sch_type18 <- c(sch_type18, "Middle/High School")
+  }
+  else if (grepl("Middle", i, ignore.case = TRUE)){ 
+    sch_type18 <- c(sch_type18, "Middle School")
+  } 
+  else if (grepl("Academy", i, ignore.case = TRUE) 
+           || grepl("High", i, ignore.case = TRUE)) {
+    sch_type18 <- c(sch_type18, "High School")
+  } 
+  else if (grepl("None", i, ignore.case = TRUE)){
+    sch_type18 <- c(sch_type18, "None")
+  }
+  else sch_type18 <- c(sch_type18, "Elementary School")
+}
+
+# adding the year, school type, and district into their own columns
+  # then reordering the columns to match every other file
+providence_data18$Year <- "2018" 
+providence_data18$SchType <- sch_type18
+providence_data18$DistName <- 'Providence'
+providence_data18 <- providence_data18 %>%  
+  
+  # we can use 'c()' to relocate multiple columns at once
+  relocate(c(Year, SchName, SchType), .after = SchCode) %>%  
+  relocate(DistName, .after = DistCode)
+
+# in case there are any values that read 'NA', we will change them to be a '0' instead
+providence_data18[is.na(providence_data18)] <- 0
+
+print(providence_data18)
+```
+
+## Excel File for the 2018-2019 School Year
+
+Below we will use the same process to extract the relevant data from the 2018-2019 school year.
+
+```{r}
+
+# renaming all of the columns in the tibble
+# we will use this exact code to make sure all of the column names for each excel file match
+colnames(my_data2) <- c('DistCode', 'DistName', 'SchCode', 'SchName', 'GroupType', 
+                        'GroupName', 'TestSubject', 'Level_1_Count', 'Level_2_Count', 
+                        'Level_3_Count', 'Level_4_Count', 'Total_Count', 
+                        'Level_1_Percentage', 'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+
+# filtering to only look at Providence District
+providence_data19 <- dplyr::filter(my_data2, DistCode == 28)    
+
+# creating a vector that contains all of the school types for each corresponding school
+sch_type19 <- c()
+for (i in providence_data19$SchName){ 
+  if (grepl("Elementary", i, ignore.case = TRUE)){ 
+    sch_type19 <- c(sch_type19, "Elementary School")
+  } 
+  else if (grepl("Middle/High", i, ignore.case = TRUE)){
+    sch_type19 <- c(sch_type19, "Middle/High School")
+  }
+  else if (grepl("Middle", i, ignore.case = TRUE)){ 
+    sch_type19 <- c(sch_type19, "Middle School")
+  } 
+  else if (grepl("Academy", i, ignore.case = TRUE) 
+           || grepl("High", i, ignore.case = TRUE)) {
+    sch_type19 <- c(sch_type19, "High School")
+  }
+  else sch_type19 <- c(sch_type19, "Elementary School")
+}
+
+# adding the year and school type into their own columns 
+  # then reordering the columns to match every other file 
+providence_data19$Year <- "2019"
+providence_data19$SchType <- sch_type19 
+providence_data19 <- providence_data19 %>% 
+  relocate(Year, .after = SchCode)     %>%  
+  relocate(SchType, .after = SchName)  
+
+# in case there are any values that read 'NA', we will change them to be a '0' instead
+providence_data19[is.na(providence_data19)] <- 0
+
+print(providence_data19)
+```
+
+## Excel File for the 2021-2022 School Year
+
+Below we will use the same process to extract the relevant data from the 2021-2022 school year.
+
+```{r}
+
+# renaming all of the columns in the tibble
+# we will use this exact code to make sure all of the column names for 
+  # each excel file match
+colnames(my_data3) <- c('DistCode', 'DistName', 'SchCode', 'SchName', 'GroupType', 
+                        'GroupName', 'TestSubject', 'Level_1_Count', 'Level_2_Count', 
+                        'Level_3_Count', 'Level_4_Count', 'Total_Count', 
+                        'Level_1_Percentage', 'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+
+# filtering to only look at Providence District
+providence_data22 <- dplyr::filter(my_data3, DistCode == 28)  
+
+# creating a vector that contains all of the school types for each corresponding school
+school_type <- c()
+for (i in providence_data22$SchName){ 
+  if (grepl("Elementary", i, ignore.case = TRUE)){ 
+    school_type <- c(school_type, "Elementary School")
+  } 
+  else if (grepl("Middle/High", i, ignore.case = TRUE)){
+    school_type <- c(school_type, "Middle/High School")
+  }
+  else if (grepl("Middle", i, ignore.case = TRUE)){ 
+    school_type <- c(school_type, "Middle School")
+  } 
+  else if (grepl("Academy", i, ignore.case = TRUE) 
+           || grepl("High", i, ignore.case = TRUE)) {
+    school_type <- c(school_type, "High School")
+  }
+  else school_type <- c(school_type, "Elementary School")
+}
+
+# adding the year and school type into their own columns
+  # then reordering the columns to match every other file 
+providence_data22$Year <- "2022"  
+providence_data22$SchType <- school_type  
+providence_data22 <- providence_data22 %>%  
+  relocate(Year, .after = SchCode)     %>%
+  relocate(SchType, .after = SchName)  
+
+# in case there are any values that read 'NA', we will change them to be a '0' instead
+providence_data22[is.na(providence_data22)] <- 0
+
+print(providence_data22)
+```
+
+## Excel File for the 2022-2023 School Year
+
+And lastly, we will extract the relevant data from the 2022-2023 school year. Instead of changing the column names after creating the providence_data23 variable, we will opt to do it for the my_data4 variable.
+
+The column naming conventions for this year of data were different from past years. Their names were either based on their numerical position or were located in the wrong column. By changing it now, we will avoid potential difficulty for the viewer to understand the information present and compare it to the other school years being measured. This will also ensure that the column names for the providence_data23 variable will match the my_data4 column names meaning we won't have to change it later.
+
+```{r}
+
+# removing the first column of entries of data
+my_data4 <- my_data4[ -c(1) ]
+
+# renaming all of the columns in the tibble, since the original excel file has different 
+  # column names compared to the other files
+colnames(my_data4) <- c('DistCode', 'DistName', 'SchCode', 'SchName', 
+                        'GroupType', 'GroupName', 'TestSubject', 
+                        'Level_1_Count', 'Level_2_Count', 'Level_3_Count', 
+                        'Level_4_Count', 'Total_Count', 'Level_1_Percentage', 
+                        'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+
+# filtering to only look at Providence District, changing values of DistName column
+providence_data23 <- dplyr::filter(my_data4, DistName == 'Providence')   
+
+# creating a vector that contains all of the school types for each corresponding school
+sch_type23 <- c()
+for (i in providence_data23$SchName){ 
+  if (grepl("Elementary", i, ignore.case = TRUE)){ 
+    sch_type23 <- c(sch_type23, "Elementary School")
+  } 
+  else if (grepl("Middle/High", i, ignore.case = TRUE)){
+    sch_type23 <- c(sch_type23, "Middle/High School")
+  }
+  else if (grepl("Middle", i, ignore.case = TRUE)){ 
+    sch_type23 <- c(sch_type23, "Middle School")
+  } 
+  else if (grepl("Academy", i, ignore.case = TRUE) 
+           || grepl("High", i, ignore.case = TRUE)) {
+    sch_type23 <- c(sch_type23, "High School")
+  }
+  else sch_type23 <- c(sch_type23, "Elementary School")
+} 
+
+# adding the year and school type into their own columns 
+  # then reordering the columns to match every other file 
+print(providence_data23)
+providence_data23$Year <- "2023"
+providence_data23$SchType <- sch_type23
+providence_data23 <- providence_data23 %>%  
+  relocate(Year, .after = SchCode)     %>%
+  relocate(SchType, .after = SchName) 
+
+# in case there are any values that read 'NA', we will change them to be a '0' instead
+providence_data23[is.na(providence_data23)] <- 0
+
+print(providence_data23)
+```
+
+## Creating the Amalgamated Providence Dataset
+
+Now, with each Excel File having the same format as in number of rows, their names and matching orders, we can use 'rbind' or row bind, which joins each row from each file together, to create our final Amalgamated Providence Dataset.
+
+```{r}
+
+# row binding all of the datasets, which combines all entries from excel sheets with
+  # the same number of columns and names
+providence_data <- rbind(providence_data18, providence_data19, providence_data22, 
+                         providence_data23)  
+providence_data$Level_1_Percentage <- providence_data$Level_1_Percentage * 100
+providence_data$Level_2_Percentage <- providence_data$Level_2_Percentage * 100
+providence_data$Level_3_Percentage <- providence_data$Level_3_Percentage * 100
+providence_data$Level_4_Percentage <- providence_data$Level_4_Percentage * 100 
+
+# creating a neighborhood vector, manually searched for schools neighborhoods 
+  # using google maps
+neighborhood <- c() 
+for (i in providence_data$SchCode){
+  if (grepl("28103", i, ignore.case = TRUE)){ 
+    neighborhood <- c(neighborhood, "West End")
+    }
+    else if (grepl("28113", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Reservoir")
+    }
+    else if (grepl("28115", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Federal Hill")
+    }
+    else if (grepl("28116", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Washington Park")
+    }
+    else if (grepl("28121", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "West End")
+    }
+    else if (grepl("28127", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Silver Lake")
+    }
+    else if (grepl("28130", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Wanskuck")
+    }
+    else if (grepl("28134", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Hartford")
+    }
+    else if (grepl("28135", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Mount Pleasant")
+    }
+    else if (grepl("28137", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Charles")
+    }
+    else if (grepl("28138", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Elmhurst")
+    }
+    else if (grepl("28139", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Federal Hill")
+    }
+    else if (grepl("28140", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Federal Hill")
+    }
+    else if (grepl("28142", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Reservoir")
+    }
+    else if (grepl("28143", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Freeman Plat Historic District")
+    }
+    else if (grepl("28144", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "West End")
+    }
+    else if (grepl("28145", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Elmhurst")
+    }
+    else if (grepl("28147", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Lower South Providence")
+    }
+    else if (grepl("28149", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "College Hill")
+    }
+    else if (grepl("28150", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Mount Pleasant")
+    }
+    else if (grepl("28151", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Fox Point")
+    }
+    else if (grepl("28153", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Olneyville")
+    }
+    else if (grepl("28156", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Lower South Providence")
+    }
+    else if (grepl("28157", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Elmwood")
+    }
+    else if (grepl("28160", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Lower South Providence")
+    }
+    else if (grepl("28161", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Smith Hill")
+    }
+    else if (grepl("28162", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Lower South Providence")
+    }
+    else if (grepl("28163", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Mount Hope")
+    }
+    else if (grepl("28164", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Federal Hill")
+    }
+    else if (grepl("28165", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Greenville")
+    }
+    else if (grepl("28170", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Elmhurst")
+    }
+    else if (grepl("28178", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Federal Hill")
+    }
+    else if (grepl("28181", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Hartford")
+    }
+    else if (grepl("28182", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Hartford")
+    }
+    else if (grepl("28187", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Wanskuck")
+    }
+    else if (grepl("28189", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Lower South Providence")
+    }
+    else if (grepl("28193", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "West End")
+    }
+    else if (grepl("28194", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Federal Hill")
+    }
+    else if (grepl("28195", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Lower South Providence")
+    }
+    else if (grepl("28196", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Unknown for Now")
+    }
+    else if (grepl("28197", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Smith Hill")
+    }
+    else if (grepl("28198", i, ignore.case = TRUE)){ 
+      neighborhood <- c(neighborhood, "Smith Hill")
+    }
+    else neighborhood <- c(neighborhood, "None")
+  }
+
+# creating a takeover vector, splitting data based on the 2019 RIDE takeover
+# results 2019 and prior are 'Pre' and results 2022 and after are 'Post' 
+takeover <- c() 
+for (i in providence_data$Year){
+  if (grepl("2018", i, ignore.case = TRUE)){ 
+    takeover <- c(takeover, "Pre Takeover")
+  } 
+  if (grepl("2019", i, ignore.case = TRUE)){ 
+    takeover <- c(takeover, "Pre Takeover")
+  } 
+  if (grepl("2022", i, ignore.case = TRUE)){ 
+    takeover <- c(takeover, "Post Takeover")
+  } 
+  if (grepl("2023", i, ignore.case = TRUE)){ 
+    takeover <- c(takeover, "Post Takeover")
+  } 
+}
+
+# adding the year and school type into their own columns 
+  # then reordering the columns to match every other file 
+providence_data$Neighborhood <- neighborhood  
+providence_data$Takeover <- takeover
+providence_data <- providence_data %>% relocate(Neighborhood, .after = SchType) %>% 
+  relocate(Takeover, .after = Year)
+
+print(providence_data)
+```
+
+## Downloading the Amalgamated Providence Dataset
+
+Below is the code to download the Amalgamated Providence Dataset. To ensure easier access, each time an amalgamated dataset is downloaded, it will be placed in a folder named 'Vecina_Data'. If a file already exists, it will not be re-downloaded and in its place, the message of 'File already exists' will be printed.
+
+```{r}
+
+if (!dir.exists("Vecina_Data")) 
+  {dir.create(file.path("Vecina_Data"), recursive = TRUE)}
+
+if (!file.exists("~/Vecina_Data/Charter_Data.csv")){
+   write.csv(providence_data,"~/Vecina_Data/Providence_Data.csv", row.names = TRUE)
+    } else {
+    print("File already exists.")
+      }
+```
+
+## ------------------------------------------------------------------------------------------------------
+
+# Creating the Charter Dataset
+
+## ------------------------------------------------------------------------------------------------------
+
+## Creating the Amalgamated Charter Dataset
+
+Next, we will be looking at the data of all charter schools. In total, there were 20 schools included in the Report Card data repository, with the numbers being provided by Victor Piercey. We will follow the same semantics with the Providence Data in terms of column names, as they will later be combined into a finalized dataset.
+
+**\*\* Note:** In the event that charter schools are added or removed to the RIDE Report Card dataset, adjust the **dist_nums** variable to include or remove the district numbers.
+
+```{r}
+  
+# numbers of all of the districts that have Charter schools in the Providence area, 
+  # these values were given by Victor Piercey
+dist_nums <- c(7, 41, 42, 43, 48, 51, 52, 53, 54, 55, 58, 59, 61, 62, 63, 64, 68, 69, 
+               81, 83)
+
+# filtering the first year of data to only keep the districts that have 
+  # charter schools
+charter_data1 <- my_data1 %>% dplyr::filter(DistCode %in% dist_nums)
+
+# created a district name vector, manually searched for districts associated 
+  # with values
+c_distname <- c()  
+for (i in charter_data1$DistCode){
+  if (grepl("41", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Achievement First Rhode Island")
+  }
+  else if (grepl("42", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Sheila Skip Nowell Leadership Academy")
+  }
+  else if (grepl("43", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "SouthSide Charter School")
+  }
+  else if (grepl("48", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Highlander")
+  }
+  else if (grepl("51", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Paul Cuffee Charter Sch")
+  }
+  else if (grepl("52", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Kingston Hill Academy")
+  }
+  else if (grepl("53", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "International Charter")
+  }
+  else if (grepl("54", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Blackstone Academy")
+  }
+  else if (grepl("55", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "The Compass School")
+  }
+  else if (grepl("58", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Beacon Charter School")
+  }
+  else if (grepl("59", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Learning Community")
+  }
+  else if (grepl("61", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Trinity Academy for the Performing Arts")
+  }
+  else if (grepl("62", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "The Greene School")
+  }
+  else if (grepl("63", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Rhode Island Nurses Institute Middle College")
+  }
+  else if (grepl("64", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Village Green Virtual")
+  }
+  else if (grepl("68", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "The Hope Academy")
+  }
+  else if (grepl("69", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Nuestro Mundo Public Charter")
+  }
+  else if (grepl("81", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Charette Charter")
+  }
+  else if (grepl("83", i, ignore.case = TRUE)){ 
+    c_distname <- c(c_distname, "Providence Preparatory Charter")
+  } 
+}
+
+# created a school name vector, manually searched for school names associated 
+  # with values
+c_schname <- c() 
+for (i in charter_data1$SchCode){
+  if (grepl("28609", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Achievement First Providence Mayoral Academy")
+  } 
+  else if (grepl("04601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "The Learning Community Charter School")
+  }
+  else if (grepl("28614", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Achievement First Iluminar Mayoral Academy")
+  } 
+  else if (grepl("28615", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "AF Providence Mayoral Academy Middle")
+  } 
+  else if (grepl("41604", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "AF Iluminar Mayoral Academy Middle School")
+  } 
+  else if (grepl("41605", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Achievement First Promesa Elementary")
+  } 
+  else if (grepl("28610", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Sheila Skip Nowell Leadership Academy")
+  } 
+  else if (grepl("28611", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "SouthSide Elementary Charter School")
+  } 
+  else if (grepl("48601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Highlander Elementary Charter School")
+  } 
+  else if (grepl("48602", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Highlander Secondary Charter School")
+  } 
+  else if (grepl("51601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Paul Cuffee Lower School")
+  } 
+  else if (grepl("51602", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Paul Cuffee Middle School")
+  } 
+  else if (grepl("51603", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Paul Cuffee Upper School")
+  } 
+  else if (grepl("32601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Kingston Hill Academy")
+  } 
+  else if (grepl("26601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "International Charter School")
+  } 
+  else if (grepl("26602", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Blackstone Academy Charter School")
+  } 
+  else if (grepl("23601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "The Compass School")
+  } 
+  else if (grepl("39601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "BEACON Charter School")
+  } 
+  else if (grepl("39603", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Founders Academy")
+  } 
+  else if (grepl("28606", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Trinity Academy for the Performing Arts")
+  } 
+  else if (grepl("97601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "The Greene School")
+  } 
+  else if (grepl("28607", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "RI Nurses Institute Middle College Charter High School")
+  } 
+  else if (grepl("28608", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Village Green Virtual Charter School")
+  } 
+  else if (grepl("28613", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "The Hope Academy")
+  } 
+  else if (grepl("69601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Nuestro Mundo Public Charter School")
+  } 
+  else if (grepl("81601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Charette Charter School")
+  } 
+  else if (grepl("83601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Providence Preparatory Charter School")
+  }  
+  else if (grepl("28601", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Highlander Charter School")
+  } 
+  else if (grepl("28602", i, ignore.case = TRUE)){ 
+    c_schname <- c(c_schname, "Paul Cuffee School")
+  } 
+  else c_schname <- c(c_schname, "Unknown")
+}
+
+# applying the district and school name vectors to the first year of charter data
+charter_data1$DistName <- c_distname  
+charter_data1$SchName <- c_schname 
+
+# adding the respective year to the charter_data1 variable
+charter_data1$Year <- '2018'
+
+# rearranging the variable to follow the order of earlier large files
+charter_data1 <- charter_data1 %>% relocate(DistName, .after = DistCode) %>% 
+  relocate(SchName, .after = SchCode) %>% relocate(Year, .after = SchCode)
+
+# filtering the second year of data to only keep the districts that 
+  # have charter schools
+charter_data2 <- my_data2 %>% dplyr::filter(DistCode %in% dist_nums)
+
+# adding the respective year to the charter_data2 variable
+charter_data2$Year <- '2019'  
+
+# rearranging the variable to follow the order of earlier large files
+charter_data2 <- charter_data2 %>% relocate(Year, .after = SchCode)
+
+# filtering the third year of data to only keep the districts that 
+  # have charter schools
+charter_data3 <- my_data3 %>% dplyr::filter(DistCode %in% dist_nums)
+
+# adding the respective year to the charter_data3 variable
+charter_data3$Year <- '2022'  
+
+# rearranging the variable to follow the order of earlier large files
+charter_data3 <- charter_data3 %>% relocate(Year, .after = SchCode)
+
+# filtering the final year of data to only keep the districts that 
+  # have charter schools
+charter_data4 <- my_data4 %>% dplyr::filter(DistCode %in% dist_nums) 
+
+# adding the respective year to the charter_data4 variable
+charter_data4$Year <- '2023'  
+
+# rearranging the variable to follow the order of earlier large files
+charter_data4 <- charter_data4 %>% relocate(Year, .after = SchCode)
+
+# row binding each year of charter data to make the charter_data variable
+charter_data <- rbind(charter_data1, charter_data2, charter_data3, charter_data4) 
+
+# changing all values of 'NA' to '0'
+charter_data[is.na(charter_data)] <- 0
+
+# created a school type vector, manually searched for school types associated 
+  # with values
+ch_sch_type <- c()
+for (i in charter_data$SchCode){
+  if (grepl("28609", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  } 
+  else if (grepl("04601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  }
+  else if (grepl("28614", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  } 
+  else if (grepl("28615", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "5-8")
+  } 
+  else if (grepl("41604", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "5-8")
+  } 
+  else if (grepl("41605", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-4")
+  } 
+  else if (grepl("28610", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "6-12")
+  } 
+  else if (grepl("28611", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-5")
+  } 
+  else if (grepl("48601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-4")
+  } 
+  else if (grepl("48602", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "5-8")
+  } 
+  else if (grepl("51601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-5")
+  } 
+  else if (grepl("51602", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "6-8")
+  } 
+  else if (grepl("51603", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("32601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-5")
+  } 
+  else if (grepl("26601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  } 
+  else if (grepl("26602", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("23601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  } 
+  else if (grepl("39601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("39603", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "6-8")
+  } 
+  else if (grepl("28606", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "7-12")
+  } 
+  else if (grepl("97601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("28607", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("28608", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("28613", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  } 
+  else if (grepl("69601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-8")
+  } 
+  else if (grepl("81601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "9-12")
+  } 
+  else if (grepl("83601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "5-8")
+  }  
+  else if (grepl("28601", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "PK-12")
+  } 
+  else if (grepl("28602", i, ignore.case = TRUE)){ 
+    ch_sch_type <- c(ch_sch_type, "K-12")
+  } 
+  else ch_sch_type <- c(ch_sch_type, "Unknown")
+}
+
+# applying the school type vector to the charter data
+charter_data$SchType <- ch_sch_type 
+charter_data <- charter_data %>% relocate(SchType, .after = SchName)
+
+print(charter_data)
+
+```
+
+## Downloading the Amalgamated Charter Dataset
+
+Below is the code to download the Amalgamated Charter Dataset.
+
+```{r}
+
+if (!dir.exists("Vecina_Data")){ 
+   dir.create(file.path("Vecina_Data"), recursive = TRUE)
+  }
+
+if (!file.exists("~/Vecina_Data/Charter_Data.csv")){
+   write.csv(charter_data,"~/Vecina_Data/Charter_Data.csv", row.names = TRUE)
+    } else {
+    print("File already exists.")
+      }
+```
+
+## ------------------------------------------------------------------------------------------------------
+
+# Creating the CNC Dataset
+
+## ------------------------------------------------------------------------------------------------------
+
+## Creating the Amalgamated Finalized Dataset
+
+Next, we will be adjusting the Amalgamated Providence Data variable and the Amalgamated Charter Data variable in order to make direct comparisons between the two. The 'Charter' column will be included to distinguish the two, as well as adding in the corresponding neighborhoods of the Charter schools included in the RIDE Report Card.
+
+For the ease of variable names, we will denote 'C' as 'Charter' and 'NC' as Non-Charter. When both Charter and Non-Charter schools are being accounted for, it will be denoted as 'CNC'.
+
+**\*\* Note:** Charter schools will come from the Amalgamated Charter Dataset and Non-Charter Schools will come from the Amalgamated Providence Dataset.
+
+```{r}
+
+# adding a 'Charter' column with the value of 'No' for schools within the PPSD
+providence_data$Charter <- "No" 
+providence_data <- providence_data %>% relocate(Charter, .after = Neighborhood)
+
+# creating a vector that contains all of the takeover values for each 
+  # corresponding year
+ctakeover <- c()  
+for (i in charter_data$Year){
+  if (grepl("2018", i, ignore.case = TRUE)){ 
+    ctakeover <- c(ctakeover, "Pre Takeover")
+  } 
+  else if (grepl("2019", i, ignore.case = TRUE)){ 
+    ctakeover <- c(ctakeover, "Pre Takeover")
+  } 
+  else if (grepl("2022", i, ignore.case = TRUE)){ 
+    ctakeover <- c(ctakeover, "Post Takeover")
+  } 
+  else if (grepl("2023", i, ignore.case = TRUE)){ 
+    ctakeover <- c(ctakeover, "Post Takeover")
+  } 
+}
+
+# creating a vector that contains all of the neighborhoods for each 
+  # corresponding school 
+cneighborhood <- c()
+for (i in charter_data$SchCode){
+  if (grepl("28609", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Hartford")
+  } 
+  else if (grepl("04601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Central Falls")
+  }
+  else if (grepl("28614", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Olneyville")
+  } 
+  else if (grepl("28615", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "West End")
+  } 
+  else if (grepl("41604", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Olneyville")
+  } 
+  else if (grepl("41605", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "South Providence")
+  } 
+  else if (grepl("28610", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "South Providence")
+  } 
+  else if (grepl("28611", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Upper South Providence")
+  } 
+  else if (grepl("48601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Elmwood")
+  } 
+  else if (grepl("48602", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Elmwood")
+  } 
+  else if (grepl("51601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Valley")
+  } 
+  else if (grepl("51602", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Federal Hill")
+  } 
+  else if (grepl("51603", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Elmwood")
+  } 
+  else if (grepl("32601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "North Kingstown")
+  } 
+  else if (grepl("26601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Oak Hill")
+  } 
+  else if (grepl("26602", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Oak Hill")
+  } 
+  else if (grepl("23601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Kingstown")
+  } 
+  else if (grepl("39601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Downtown Woonsocket")
+  } 
+  else if (grepl("39603", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Downtown Woonsocket")
+  } 
+  else if (grepl("28606", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Downtown Providence")
+  } 
+  else if (grepl("97601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "West Greenwich")
+  } 
+  else if (grepl("28607", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Downtown Providence")
+  } 
+  else if (grepl("28608", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Downtown Providence")
+  } 
+  else if (grepl("28613", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Lower South Providence")
+  } 
+  else if (grepl("69601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Lower South Providence")
+  } 
+  else if (grepl("81601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Downtown Providence")
+  } 
+  else if (grepl("83601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "West End")
+  }  
+  else if (grepl("28601", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Elmwood")
+  } 
+  else if (grepl("28602", i, ignore.case = TRUE)){ 
+    cneighborhood <- c(cneighborhood, "Elmwood")
+  } 
+  else cneighborhood <- c(cneighborhood, "Unknown")
+}
+
+# adding the takeover and neighborhood vectors into their own columns
+  # then reordering the columns to match the providence data variable
+charter_data$Takeover <- ctakeover 
+charter_data$Neighborhood <- cneighborhood 
+
+# adding a 'Charter' column with the value of 'Yes' for charter schools
+charter_data$Charter <- "Yes"  
+charter_data <- charter_data %>% relocate(Takeover, .after = Year) %>% 
+  relocate(Neighborhood, .after = SchType) %>% relocate(Charter, .after = Neighborhood)
+
+# row binding the updated providence_data and charter_data variables
+finalized_data <- rbind(providence_data, charter_data)
+print(finalized_data)
+```
+
+## Downloading the Amalgamated Finalized Dataset
+
+Below is the code to download the Amalgamated Finalized Dataset.
+
+```{r}
+
+if (!dir.exists("Vecina_Data")) 
+{dir.create(file.path("Vecina_Data"), recursive = TRUE)}
+
+if (!file.exists("~/Vecina_Data/Finalized_Data.csv")){
+   write.csv(finalized_data,"~/Vecina_Data/Finalized_Data.csv", row.names = TRUE)
+    } else {
+    print("File already exists.")
+      }
+```
+
+## ------------------------------------------------------------------------------------------------------
+
+# Creating the Rhode Island Dataset
+
+## ------------------------------------------------------------------------------------------------------
+
+## Creating the Amalgamated Rhode Island Dataset
+
+Lastly, we will be considering all of the schools within the RIDE Report Card excel files. The final Amalgamated Rhode Island Dataset will be used to make direct comparisons between the performances of the PPSD and of all schools within Rhode Island.
+
+```{r warning = FALSE}
+
+# assigning variable names to each of the excel files being considered
+ri_data1 <- read_excel("~/Desktop/Thesis/R tests/Assessments_201718.xlsx", sheet = 4) 
+ri_data2 <- read_excel("~/Desktop/Thesis/R tests/Assessments_201819.xlsx", sheet = 1) 
+ri_data3 <- read_excel("~/Desktop/Thesis/R tests/Assessments_202122.xlsx", sheet = 4) 
+ri_data4 <- read_excel("~/Desktop/Thesis/R tests/Assessments_202223.xlsx", sheet = 2)
+
+# removing unnecessary columns from each ri_data* variable
+ri_data1 <- ri_data1[ -c(3) ]
+ri_data2 <- ri_data2[ -c(2, 4) ]
+ri_data3 <- ri_data3[ -c(2, 4) ]
+ri_data4 <- ri_data4[ -c(1, 3, 5) ] 
+
+# adding in the Year column with value of '2018'
+ri_data1$Year <- '2018' 
+ri_data1 <- ri_data1 %>% relocate(Year, .after = SchCode)
+
+# adding in the Year column with value of '2019'
+ri_data2$Year <- '2019' 
+ri_data2 <- ri_data2 %>% relocate(Year, .after = SchCode)
+
+# adding in the Year column with value of '2022'
+ri_data3$Year <- '2022' 
+ri_data3 <- ri_data3 %>% relocate(Year, .after = SchCode)
+
+# adding in the Year column with value of '2023'
+ri_data4$Year <- '2023' 
+ri_data4 <- ri_data4 %>% relocate(Year, .after = SchCode)
+
+# renaming all of the columns in the tibbles, we will use this exact code to make sure 
+  # all of the column names for each excel file match 
+colnames(ri_data1) <- c('DistCode', 'SchCode', 'Year', 'GroupType', 'GroupName', 
+                        'TestSubject', 'Level_1_Count', 'Level_2_Count', 
+                        'Level_3_Count', 'Level_4_Count', 'Total_Count', 
+                        'Level_1_Percentage', 'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+colnames(ri_data2) <-  c('DistCode', 'SchCode', 'Year', 'GroupType', 'GroupName', 
+                        'TestSubject', 'Level_1_Count', 'Level_2_Count', 
+                        'Level_3_Count', 'Level_4_Count', 'Total_Count', 
+                        'Level_1_Percentage', 'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+colnames(ri_data3) <- c('DistCode', 'SchCode', 'Year', 'GroupType', 'GroupName', 
+                        'TestSubject', 'Level_1_Count', 'Level_2_Count', 
+                        'Level_3_Count', 'Level_4_Count', 'Total_Count', 
+                        'Level_1_Percentage', 'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+colnames(ri_data4) <-  c('DistCode', 'SchCode', 'Year', 'GroupType', 'GroupName', 
+                        'TestSubject', 'Level_1_Count', 'Level_2_Count', 
+                        'Level_3_Count', 'Level_4_Count', 'Total_Count', 
+                        'Level_1_Percentage', 'Level_2_Percentage', 'Level_3_Percentage', 
+                        'Level_4_Percentage')
+
+# row binding all of the RI data variables to make the RI data DOT variable
+ri_data <- rbind(ri_data1, ri_data2, ri_data3, ri_data4)
+print(ri_data)
+```
+
+## Downloading the Amalgamated RI Dataset
+
+Below is the code to download the Amalgamated Finalized Dataset.
+
+```{r}
+
+if (!dir.exists("Vecina_Data")) 
+{dir.create(file.path("Vecina_Data"), recursive = TRUE)}
+
+if (!file.exists("~/Vecina_Data/RhodeIsland_Data.csv")){
+   write.csv(ri_data,"~/Vecina_Data/RhodeIsland_Data.csv", row.names = TRUE)
+    } else {
+    print("File already exists.")
+      }
+
+```
